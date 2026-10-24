@@ -1,0 +1,64 @@
+name: Build GDH Android
+
+on:
+workflow_dispatch:
+push:
+branches:
+- "**"
+
+jobs:
+build:
+name: Build Android ${{ matrix.target }}
+runs-on: ubuntu-latest
+
+strategy:
+  fail-fast: false
+  matrix:
+    include:
+      - target: Android32
+        abi: armeabi-v7a
+      - target: Android64
+        abi: arm64-v8a
+
+steps:
+  - name: Checkout source
+    uses: actions/checkout@v4
+
+  - name: Install archive extractor
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y p7zip-full
+
+  - name: Download FFmpeg libraries
+    shell: bash
+    run: |
+      set -euo pipefail
+      mkdir -p .cache/ffmpeg libs
+      curl --fail --location --retry 3 \
+        -o .cache/ffmpeg/ffmpeg.7z \
+        "https://gitlab.com/tobyadd/ffmpeg-android-x264-dev/-/releases/build/downloads/ffmpeg.7z"
+      7z x .cache/ffmpeg/ffmpeg.7z -olibs -y
+
+  - name: Verify required libraries
+    shell: bash
+    run: |
+      set -euo pipefail
+      LIB="libs/ffmpeg/${{ matrix.abi }}"
+      test -f "$LIB/libavcodec/libavcodec.a"
+      test -f "$LIB/libavformat/libavformat.a"
+      test -f "$LIB/x264/libx264.a"
+
+  - name: Build GDH
+    uses: geode-sdk/build-geode-mod@main
+    with:
+      target: ${{ matrix.target }}
+
+  - name: Upload build artifacts
+    uses: actions/upload-artifact@v4
+    if: always()
+    with:
+      name: GDH-${{ matrix.target }}
+      path: |
+        build/**/*.geode
+        build*/*.geode
+      if-no-files-found: warn
