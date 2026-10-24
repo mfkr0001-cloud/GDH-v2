@@ -449,6 +449,7 @@ void RenderMain() {
     
     animateAlpha();
 
+#ifdef GEODE_IS_DESKTOP
     if (config.get<bool>("re::show_editor", false)) {
         ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1.f);
 
@@ -469,22 +470,30 @@ void RenderMain() {
         ImGui::End();
         ImGui::PopStyleVar();
     }
+#endif
 
     ImGuiH::RenderPopups();
     if (GDH::Recorder::get().isRecording()) RenderRecordingBadge();
-
+    
 #ifdef GEODE_IS_ANDROID
-    // Touch button to open/close the desktop-style ImGui interface on Android.
     {
         ImGuiIO& touchIO = ImGui::GetIO();
-        const float scale = std::max(0.65f, std::min(touchIO.DisplaySize.x / 1280.0f, touchIO.DisplaySize.y / 720.0f));
+        const float scale = std::max(
+            0.65f,
+            std::min(touchIO.DisplaySize.x / 1280.0f, touchIO.DisplaySize.y / 720.0f)
+        );
+
         ImGui::SetNextWindowPos(ImVec2(12.0f * scale, 70.0f * scale), ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.72f);
         ImGui::SetNextWindowSize(ImVec2(120.0f * scale, 44.0f * scale), ImGuiCond_Always);
-        if (ImGui::Begin("##GDH_TouchToggle", nullptr,
+        ImGui::SetNextWindowBgAlpha(0.72f);
+
+        if (ImGui::Begin(
+            "##GDH_TouchToggle",
+            nullptr,
             ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings |
             ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+        )) {
             if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(-1.0f, -1.0f))) {
                 ToggleUI();
             }
