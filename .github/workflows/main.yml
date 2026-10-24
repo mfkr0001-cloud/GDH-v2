@@ -1,50 +1,16 @@
 name: GDH Android Build
 
-"on":
+'on':
 workflow_dispatch:
-push:
-branches:
-- main
 
 jobs:
-android32:
-name: Build Android 32-bit
+build:
 runs-on: ubuntu-latest
 steps:
 - name: Checkout
 uses: actions/checkout@v4
 
-  - name: Build GDH
-    uses: geode-sdk/build-geode-mod@main
-    with:
-      target: Android32
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    if: always()
-    with:
-      name: GDH-Android32
-      path: |
-        **/*.geode
-      if-no-files-found: warn
-
-android64:
-name: Build Android 64-bit
-runs-on: ubuntu-latest
-steps:
-- name: Checkout
-uses: actions/checkout@v4
-
-  - name: Build GDH
+  - name: Build GDH for Android
     uses: geode-sdk/build-geode-mod@main
     with:
       target: Android64
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    if: always()
-    with:
-      name: GDH-Android64
-      path: |
-        **/*.geode
-      if-no-files-found: warn
