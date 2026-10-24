@@ -10,7 +10,7 @@ HacksLayer::~HacksLayer() {
 }
 
 bool HacksLayer::init() {
-    if (!Popup::init(460.f, 260.f, "GDH_square.png"_spr))
+    if (!Popup::init(420.f, 230.f, "GDH_square.png"_spr))
         return false;
 
     auto& gui = GDH::Gui::get();
@@ -46,8 +46,8 @@ bool HacksLayer::init() {
     panel->setContentSize({100.f, 250.f});
     m_mainLayer->addChild(panel);
 
-    m_tabsScrollLayer = geode::ScrollLayer::create({200.f, 250.f});
-    m_tabsScrollLayer->setPosition({-95.f, 5.f});
+    m_tabsScrollLayer = geode::ScrollLayer::create({96.f, 220.f});
+    m_tabsScrollLayer->setPosition({5.f, 5.f});
 
     auto tabsMenu = CCMenu::create();
     tabsMenu->setAnchorPoint({0.f, 0.f});
@@ -102,9 +102,9 @@ bool HacksLayer::init() {
     );
     tabsMenu->updateLayout();
 
-    float contentHeight = std::max(240.f, tabsMenu->getContentHeight() + 10.f);
+    float contentHeight = std::max(210.f, tabsMenu->getContentHeight() + 10.f);
     m_tabsScrollLayer->m_contentLayer->setContentSize({96.f, contentHeight});
-    tabsMenu->setPosition({107.f, 5.f});
+    tabsMenu->setPosition({0.f, 5.f});
 
     m_tabsScrollLayer->m_contentLayer->addChild(tabsMenu);
     m_tabsScrollLayer->moveToTop();
