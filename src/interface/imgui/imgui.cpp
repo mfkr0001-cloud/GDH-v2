@@ -178,8 +178,21 @@ void SettingsRender() {
 
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     ImGui::InputTextWithHint("##Search", "Search:", &g_search_text);
+
+    // Android/desktop UI scaling controls.
+    float ui_scale = config.get<float>("gui::ui_scale", 1.0f);
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    
+    if (ImGui::SliderFloat("Menu and tabs size", &ui_scale, 0.65f, 1.60f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
+        config.set<float>("gui::ui_scale", ui_scale);
+    }
+
+    float tab_scale = config.get<float>("gui::tab_scale", 1.0f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::SliderFloat("Tab width/spacing", &tab_scale, 0.65f, 1.50f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
+        config.set<float>("gui::tab_scale", tab_scale);
+        g_hardRecalculation = true;
+    }
+
     int duration = config.get<int>("gui::anim_durr", 100);
     if (ImGuiH::DragInt("##gui_anim_durr", &duration, 50.f, 0, 500, "Duration Anim: %dms")) {
         config.set<int>("gui::anim_durr", duration);
@@ -446,7 +459,27 @@ void RenderMain() {
     auto& layoutManager = GDH::Layout::Manager::get();
     auto& kb = GDH::Keybinds::get();
     ImGuiIO &io = ImGui::GetIO();
-    
+
+    // Restore a baseline style before applying the selected scale so scaling
+    // does not accumulate every frame (a common source of UI jitter/lag).
+    static ImGuiStyle baseStyle;
+    static bool baseStyleReady = false;
+    static float appliedScale = -1.0f;
+    float requestedScale = std::clamp(config.get<float>("gui::ui_scale", 1.0f), 0.65f, 1.60f);
+    if (!baseStyleReady) {
+        baseStyle = ImGui::GetStyle();
+        baseStyleReady = true;
+    }
+    if (std::abs(appliedScale - requestedScale) > 0.001f) {
+        ImGui::GetStyle() = baseStyle;
+        ImGui::GetStyle().ScaleAllSizes(requestedScale);
+        io.FontGlobalScale = requestedScale;
+        appliedScale = requestedScale;
+        g_hardRecalculation = true;
+    }
+    float tabScale = std::clamp(config.get<float>("gui::tab_scale", 1.0f), 0.65f, 1.50f);
+    ImGui::GetStyle().ItemSpacing.x = baseStyle.ItemSpacing.x * requestedScale * tabScale;
+
     animateAlpha();
 
 #ifdef GEODE_IS_DESKTOP
@@ -494,7 +527,7 @@ void RenderMain() {
             ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
         )) {
-            if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(-1.0f, -1.0f))) {
+            if (ImGui::Button(g_show ? "X  Close menu" : "Open GDH menu", ImVec2(-1.0f, -1.0f))) {
                 ToggleUI();
             }
         }
