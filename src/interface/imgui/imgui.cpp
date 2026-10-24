@@ -27,6 +27,11 @@ using namespace geode::prelude;
 #include "windows/replayEngine.hpp"
 
 static bool g_show = false;
+#ifdef GEODE_IS_ANDROID
+// Scale for Android: can be adjusted from the persistent floating control.
+static float g_androidUiScale = 1.0f;
+static bool g_androidControlOpen = false;
+#endif
 
 static bool g_showThemeEditor = false;
 static bool g_reopenAfterTheme = false;
@@ -143,16 +148,13 @@ void animateAlpha()
 void PushAnimateFoundColor(const std::string& hackName) {
     static std::unordered_map<std::string, float> anim;
 
-    if (g_search_text.empty()) {
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha);
-        return;
-    }
-
     std::string search_name = hackName;
     std::string search_item = g_search_text;
-    std::transform(search_item.begin(), search_item.end(), search_item.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    std::transform(search_name.begin(), search_name.end(), search_name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    bool founded = search_name.find(search_item) != std::string::npos;
+
+    std::transform(search_item.begin(), search_item.end(), search_item.begin(), ::tolower);
+    std::transform(search_name.begin(), search_name.end(), search_name.begin(), ::tolower);
+
+    bool founded = search_item.empty() ? true : (search_name.find(search_item) != std::string::npos);
 
     float& t = anim[hackName];
     
@@ -181,28 +183,8 @@ void SettingsRender() {
 
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     ImGui::InputTextWithHint("##Search", "Search:", &g_search_text);
-
-    // Android/desktop UI scaling controls.
-    float ui_scale = config.get<float>("gui::ui_scale", 1.0f);
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    if (ImGui::SliderFloat("Menu and tabs size", &ui_scale, 0.65f, 1.60f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
-        config.set<float>("gui::ui_scale", ui_scale);
-    }
-
-    float menu_width = config.get<float>("gui::menu_width_scale", 1.0f);
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    if (ImGui::SliderFloat("Panel width", &menu_width, 0.70f, 1.50f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
-        config.set<float>("gui::menu_width_scale", menu_width);
-        g_hardRecalculation = true;
-    }
-
-    float tab_scale = config.get<float>("gui::tab_scale", 1.0f);
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-    if (ImGui::SliderFloat("Tab width/spacing", &tab_scale, 0.65f, 1.50f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
-        config.set<float>("gui::tab_scale", tab_scale);
-        g_hardRecalculation = true;
-    }
-
+    
     int duration = config.get<int>("gui::anim_durr", 100);
     if (ImGuiH::DragInt("##gui_anim_durr", &duration, 50.f, 0, 500, "Duration Anim: %dms")) {
         config.set<int>("gui::anim_durr", duration);
@@ -303,6 +285,7 @@ void KeybindsRender() {
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::options", "Options");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::graphics", "Graphics Settings");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::quests", "Quests Page");
+        ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::mobile_ui", "Open Mobile UI");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::reset_level", "Reset Level");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::practice_mode", "Practice Mode");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::reset_volume", "Reset Volume");
@@ -468,27 +451,7 @@ void RenderMain() {
     auto& layoutManager = GDH::Layout::Manager::get();
     auto& kb = GDH::Keybinds::get();
     ImGuiIO &io = ImGui::GetIO();
-
-    // Restore a baseline style before applying the selected scale so scaling
-    // does not accumulate every frame (a common source of UI jitter/lag).
-    static ImGuiStyle baseStyle;
-    static bool baseStyleReady = false;
-    static float appliedScale = -1.0f;
-    float requestedScale = std::clamp(config.get<float>("gui::ui_scale", 1.0f), 0.65f, 1.60f);
-    if (!baseStyleReady) {
-        baseStyle = ImGui::GetStyle();
-        baseStyleReady = true;
-    }
-    if (std::abs(appliedScale - requestedScale) > 0.001f) {
-        ImGui::GetStyle() = baseStyle;
-        ImGui::GetStyle().ScaleAllSizes(requestedScale);
-        io.FontGlobalScale = requestedScale;
-        appliedScale = requestedScale;
-        g_hardRecalculation = true;
-    }
-    float tabScale = std::clamp(config.get<float>("gui::tab_scale", 1.0f), 0.65f, 1.50f);
-    ImGui::GetStyle().ItemSpacing.x = baseStyle.ItemSpacing.x * requestedScale * tabScale;
-
+    
     animateAlpha();
 
 #ifdef GEODE_IS_DESKTOP
@@ -516,47 +479,24 @@ void RenderMain() {
 
     ImGuiH::RenderPopups();
     if (GDH::Recorder::get().isRecording()) RenderRecordingBadge();
-    
+
 #ifdef GEODE_IS_ANDROID
-    // Persistent Android control: separate drag handle and reliable toggle.
-    // It is rendered before the visibility check, so it remains when GDH is closed.
-    {
-        ImGuiIO& touchIO = ImGui::GetIO();
-        const float scale = std::clamp(
-            std::min(touchIO.DisplaySize.x / 1280.0f, touchIO.DisplaySize.y / 720.0f),
-            0.70f, 1.15f
-        );
-        static ImVec2 togglePos(12.0f, 70.0f);
-        static bool togglePosInitialized = false;
-        const ImVec2 toggleSize(220.0f * scale, 68.0f * scale);
-        if (!togglePosInitialized) {
-            togglePos = ImVec2(12.0f * scale, 70.0f * scale);
-            togglePosInitialized = true;
+    // Persistent, draggable launcher: it is drawn even while the main menu is closed.
+    // Move it by dragging the title bar. The scale slider is intentionally independent
+    // of the launcher visibility so the menu can always be reopened.
+    ImGui::SetNextWindowPos(ImVec2(18.0f, 90.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(190.0f, 112.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowBgAlpha(0.88f);
+    if (ImGui::Begin("GDH launcher", nullptr,
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(150.0f, 48.0f))) {
+            ToggleUI();
         }
-
-        togglePos.x = std::clamp(togglePos.x, 0.0f, std::max(0.0f, touchIO.DisplaySize.x - toggleSize.x));
-        togglePos.y = std::clamp(togglePos.y, 0.0f, std::max(0.0f, touchIO.DisplaySize.y - toggleSize.y));
-        ImGui::SetNextWindowPos(togglePos, ImGuiCond_Always);
-        ImGui::SetNextWindowSize(toggleSize, ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.88f);
-        const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
-            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
-            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-
-        if (ImGui::Begin("##GDH_TouchToggle", nullptr, flags)) {
-            // Drag only from this dedicated strip; the main button remains easy to tap.
-            ImGui::InvisibleButton("##GDH_DragToggle", ImVec2(-1.0f, 18.0f * scale));
-            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 1.0f)) {
-                togglePos.x += touchIO.MouseDelta.x;
-                togglePos.y += touchIO.MouseDelta.y;
-            }
-            if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(-1.0f, 42.0f * scale))) {
-                // Keep the touch control alive regardless of menu visibility.
-                if (!g_isAnimating) ToggleUI();
-            }
-        }
-        ImGui::End();
+        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.75f, 2.5f, "%.2fx");
+        io.FontGlobalScale = g_androidUiScale;
     }
+    ImGui::End();
 #endif
 
     if (!g_show) return;
