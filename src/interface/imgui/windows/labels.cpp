@@ -1,4 +1,4 @@
-#ifdef GEODE_IS_DESKTOP
+#if defined(GEODE_IS_DESKTOP) || defined(GEODE_IS_ANDROID)
 #include "imgui.h"
 #include <imgui_internal.h>
 #include <imgui-cocos.hpp>
