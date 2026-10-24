@@ -528,7 +528,7 @@ void RenderMain() {
         );
         static ImVec2 togglePos(12.0f, 70.0f);
         static bool togglePosInitialized = false;
-        const ImVec2 toggleSize(154.0f * scale, 44.0f * scale);
+        const ImVec2 toggleSize(220.0f * scale, 68.0f * scale);
         if (!togglePosInitialized) {
             togglePos = ImVec2(12.0f * scale, 70.0f * scale);
             togglePosInitialized = true;
@@ -545,13 +545,13 @@ void RenderMain() {
 
         if (ImGui::Begin("##GDH_TouchToggle", nullptr, flags)) {
             // Drag only from this dedicated strip; the main button remains easy to tap.
-            ImGui::InvisibleButton("##GDH_DragToggle", ImVec2(-1.0f, 12.0f * scale));
+            ImGui::InvisibleButton("##GDH_DragToggle", ImVec2(-1.0f, 18.0f * scale));
             if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 1.0f)) {
                 togglePos.x += touchIO.MouseDelta.x;
                 togglePos.y += touchIO.MouseDelta.y;
             }
-            if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(-1.0f, 23.0f * scale))) {
-                // Do not let the animation lock make the control appear dead.
+            if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(-1.0f, 42.0f * scale))) {
+                // Keep the touch control alive regardless of menu visibility.
                 if (!g_isAnimating) ToggleUI();
             }
         }
