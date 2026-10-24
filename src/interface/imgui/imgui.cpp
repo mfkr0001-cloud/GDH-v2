@@ -518,8 +518,8 @@ void RenderMain() {
     if (GDH::Recorder::get().isRecording()) RenderRecordingBadge();
     
 #ifdef GEODE_IS_ANDROID
-    // One persistent, draggable touch control. It stays available while the
-    // GDH panels are closed, so the menu can always be reopened.
+    // Persistent Android control: separate drag handle and reliable toggle.
+    // It is rendered before the visibility check, so it remains when GDH is closed.
     {
         ImGuiIO& touchIO = ImGui::GetIO();
         const float scale = std::clamp(
@@ -528,30 +528,31 @@ void RenderMain() {
         );
         static ImVec2 togglePos(12.0f, 70.0f);
         static bool togglePosInitialized = false;
-        const ImVec2 toggleSize(148.0f * scale, 42.0f * scale);
+        const ImVec2 toggleSize(154.0f * scale, 44.0f * scale);
         if (!togglePosInitialized) {
             togglePos = ImVec2(12.0f * scale, 70.0f * scale);
             togglePosInitialized = true;
         }
 
+        togglePos.x = std::clamp(togglePos.x, 0.0f, std::max(0.0f, touchIO.DisplaySize.x - toggleSize.x));
+        togglePos.y = std::clamp(togglePos.y, 0.0f, std::max(0.0f, touchIO.DisplaySize.y - toggleSize.y));
         ImGui::SetNextWindowPos(togglePos, ImGuiCond_Always);
         ImGui::SetNextWindowSize(toggleSize, ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.82f);
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
+        ImGui::SetNextWindowBgAlpha(0.88f);
+        const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
-            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoResize;
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
 
         if (ImGui::Begin("##GDH_TouchToggle", nullptr, flags)) {
-            // Drag the small title strip to reposition the toggle.
-            ImGui::InvisibleButton("##GDH_DragToggle", ImVec2(-1.0f, 7.0f * scale));
-            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            // Drag only from this dedicated strip; the main button remains easy to tap.
+            ImGui::InvisibleButton("##GDH_DragToggle", ImVec2(-1.0f, 12.0f * scale));
+            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 1.0f)) {
                 togglePos.x += touchIO.MouseDelta.x;
                 togglePos.y += touchIO.MouseDelta.y;
-                togglePos.x = std::clamp(togglePos.x, 0.0f, std::max(0.0f, touchIO.DisplaySize.x - toggleSize.x));
-                togglePos.y = std::clamp(togglePos.y, 0.0f, std::max(0.0f, touchIO.DisplaySize.y - toggleSize.y));
             }
-            if (ImGui::Button(g_show ? "X  Close GDH" : "Open GDH", ImVec2(-1.0f, -1.0f))) {
-                ToggleUI();
+            if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(-1.0f, 23.0f * scale))) {
+                // Do not let the animation lock make the control appear dead.
+                if (!g_isAnimating) ToggleUI();
             }
         }
         ImGui::End();
