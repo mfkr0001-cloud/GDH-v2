@@ -543,9 +543,30 @@ void RenderMain() {
         std::string windowName = window.getName();
         if (windowName == "Invisible" || windowName == "Settings" || windowName == "Search") continue;
         
+        const bool isReplayEngineWindow = (windowName == "Replay Engine");
+#ifdef GEODE_IS_ANDROID
+        if (isReplayEngineWindow) {
+            // Old saved layout coordinates can put the bot window outside the
+            // visible area on Android. Give it a safe on-screen first position
+            // and ignore stale layout transforms for this window.
+            const ImVec2 displaySize = io.DisplaySize;
+            const float windowWidth = std::max(180.0f, std::min(340.0f, displaySize.x - 16.0f));
+            const float windowHeight = std::max(160.0f, std::min(300.0f, displaySize.y - 16.0f));
+            ImGui::SetNextWindowPos(
+                ImVec2(std::max(8.0f, (displaySize.x - windowWidth) * 0.5f),
+                       std::max(8.0f, (displaySize.y - windowHeight) * 0.5f)),
+                ImGuiCond_FirstUseEver
+            );
+            ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight), ImGuiCond_FirstUseEver);
+            ImGui::Begin(windowName.c_str(), nullptr, ImGuiWindowFlags_NoSavedSettings);
+        } else {
+            layoutManager.applyWindowTransform(windowName);
+            (windowName == "Framerate") ? ImGui::Begin(windowName.c_str()) : ImGuiH::BeginSmoothScroll(windowName.c_str());
+        }
+#else
         layoutManager.applyWindowTransform(windowName);
-
-        (windowName == "Framerate" || windowName == "Replay Engine") ? ImGui::Begin(windowName.c_str()) : ImGuiH::BeginSmoothScroll(windowName.c_str());
+        (windowName == "Framerate" || isReplayEngineWindow) ? ImGui::Begin(windowName.c_str()) : ImGuiH::BeginSmoothScroll(windowName.c_str());
+#endif
         
         if (window.avaibleCustomWindowImGui()) window.callCustomWindowImGui();
 
