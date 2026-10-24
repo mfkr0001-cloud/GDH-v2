@@ -29,7 +29,7 @@ void HacksTab::addToggle(GDH::Hack& hck) {
     auto& gui = GDH::Gui::get();
     const std::string ID = hck.getID();
     
-    float columnWidth = 325.f; 
+    float columnWidth = 285.f; 
     bool disabled = hck.getDisabled();
 
     auto hackNode = CCMenu::create();
@@ -106,7 +106,7 @@ bool HacksTab::init() {
 
     setPosition({0, 0});
 
-    m_scrollLayer = ScrollLayer::create({340.f, 250.f});
+    m_scrollLayer = ScrollLayer::create({310.f, 220.f});
     m_scrollLayer->m_contentLayer->setLayout(
         geode::ColumnLayout::create()
             ->setAutoScale(false)
@@ -114,7 +114,7 @@ bool HacksTab::init() {
             ->setAutoGrowAxis(false)
             ->setGap(0.f)
     );
-    m_scrollLayer->setPosition({107.f, 5.f});
+    m_scrollLayer->setPosition({105.f, 5.f});
     m_scrollLayer->m_peekLimitTop = 15;
     m_scrollLayer->m_peekLimitBottom = 15;
     
@@ -133,14 +133,14 @@ void HacksTab::addPadding(float height) {
 void HacksTab::addSeparator(float height) {
     m_currentRow = nullptr; 
     auto node = cocos2d::CCLayerColor::create({104, 104, 191, 80});
-    node->setContentSize({330.f, height});
+    node->setContentSize({300.f, height});
     m_scrollLayer->m_contentLayer->addChild(node);
 }
 
 void HacksTab::prepareNewRow() {
-    float columnWidth = 325.f;
+    float columnWidth = 285.f;
     m_currentRow = CCMenu::create();
-    m_currentRow->setContentSize({335.f, 32.f});
+    m_currentRow->setContentSize({300.f, 32.f});
     m_currentRow->setLayout(
         geode::RowLayout::create()
             ->setGap(0.f)
@@ -153,7 +153,7 @@ void HacksTab::prepareNewRow() {
 
 void HacksTab::addHackToggle(const std::string& labelText, const std::string& key, bool defaultValue, geode::Function<void(bool)> callback) {
     auto& config = Config::get();
-    float columnWidth = 325.f;
+    float columnWidth = 285.f;
 
     auto node = CCMenu::create();
     node->setContentSize({columnWidth, 30.f});
@@ -191,7 +191,7 @@ void HacksTab::addConfigToggle(
     geode::Function<void(bool)> callback
 ) {
     auto& config = Config::get();
-    float columnWidth = 325.f;
+    float columnWidth = 285.f;
 
     auto node = CCMenu::create();
     node->setContentSize({columnWidth, 30.f});
@@ -226,7 +226,7 @@ void HacksTab::addConfigToggle(
 
 void HacksTab::addConfigIntInput(const std::string& labelText, const std::string& key, int defaultValue, int min, int max, geode::Function<void(int)> callback) {
     auto& config = Config::get();
-    float columnWidth = 325.f;
+    float columnWidth = 285.f;
     
     auto node = CCMenu::create();
     node->setContentSize({columnWidth, 30.f});
@@ -265,7 +265,7 @@ void HacksTab::addConfigIntInput(const std::string& labelText, const std::string
 
 void HacksTab::addConfigFloatInput(const std::string& labelText, const std::string& key, float defaultValue, float min, float max, geode::Function<void(float)> callback) {
     auto& config = Config::get();
-    float columnWidth = 325.f;
+    float columnWidth = 285.f;
     
     auto node = CCMenu::create();
     node->setContentSize({columnWidth, 30.f});
