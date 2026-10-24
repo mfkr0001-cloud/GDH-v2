@@ -1,16 +1,50 @@
-name: GDH Android Build
+name: Build GDH for Android
 
 'on':
-workflow_dispatch:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-build:
-runs-on: ubuntu-latest
-steps:
-- name: Checkout
-uses: actions/checkout@v4
+  build:
+    name: Build GDH (${{ matrix.target }})
+    runs-on: ubuntu-latest
 
-  - name: Build GDH for Android
-    uses: geode-sdk/build-geode-mod@main
-    with:
-      target: Android64
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - Android32
+          - Android64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check project files
+        shell: bash
+        run: |
+          set -e
+          test -f mod.json
+          test -f CMakeLists.txt
+          test -d src
+          echo "GDH source files found"
+
+      - name: Build Geode mod
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Upload Geode artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: GDH-${{ matrix.target }}
+          path: |
+            **/*.geode
+          if-no-files-found: warn
+          retention-days: 7
