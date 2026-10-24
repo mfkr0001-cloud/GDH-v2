@@ -11,9 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build GDH (${{ matrix.target }})
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
@@ -22,24 +20,42 @@ jobs:
           - Android64
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check project files
+      - name: Install 7zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
+      - name: Download FFmpeg libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .cache/ffmpeg libs
+          curl --fail --location --retry 3 \
+            -o .cache/ffmpeg/ffmpeg.7z \
+            "https://gitlab.com/tobyadd/ffmpeg-android-x264-dev/-/releases/build/downloads/ffmpeg.7z"
+          7z x .cache/ffmpeg/ffmpeg.7z -olibs -y
+
+      - name: Verify FFmpeg libraries
         shell: bash
         run: |
           set -e
-          test -f mod.json
-          test -f CMakeLists.txt
-          test -d src
-          echo "GDH source files found"
+          ABI="arm64-v8a"
+          if [ "${{ matrix.target }}" = "Android32" ]; then
+            ABI="armeabi-v7a"
+          fi
+          test -f "libs/ffmpeg/$ABI/libavcodec/libavcodec.a"
+          test -f "libs/ffmpeg/$ABI/libavformat/libavformat.a"
+          test -f "libs/ffmpeg/$ABI/x264/libx264.a"
 
-      - name: Build Geode mod
+      - name: Build GDH
         uses: geode-sdk/build-geode-mod@main
         with:
           target: ${{ matrix.target }}
 
-      - name: Upload Geode artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -47,4 +63,3 @@ jobs:
           path: |
             **/*.geode
           if-no-files-found: warn
-          retention-days: 7
