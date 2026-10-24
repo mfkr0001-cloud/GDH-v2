@@ -143,13 +143,16 @@ void animateAlpha()
 void PushAnimateFoundColor(const std::string& hackName) {
     static std::unordered_map<std::string, float> anim;
 
+    if (g_search_text.empty()) {
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha);
+        return;
+    }
+
     std::string search_name = hackName;
     std::string search_item = g_search_text;
-
-    std::transform(search_item.begin(), search_item.end(), search_item.begin(), ::tolower);
-    std::transform(search_name.begin(), search_name.end(), search_name.begin(), ::tolower);
-
-    bool founded = search_item.empty() ? true : (search_name.find(search_item) != std::string::npos);
+    std::transform(search_item.begin(), search_item.end(), search_item.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(search_name.begin(), search_name.end(), search_name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    bool founded = search_name.find(search_item) != std::string::npos;
 
     float& t = anim[hackName];
     
@@ -184,6 +187,13 @@ void SettingsRender() {
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
     if (ImGui::SliderFloat("Menu and tabs size", &ui_scale, 0.65f, 1.60f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
         config.set<float>("gui::ui_scale", ui_scale);
+    }
+
+    float menu_width = config.get<float>("gui::menu_width_scale", 1.0f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::SliderFloat("Panel width", &menu_width, 0.70f, 1.50f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
+        config.set<float>("gui::menu_width_scale", menu_width);
+        g_hardRecalculation = true;
     }
 
     float tab_scale = config.get<float>("gui::tab_scale", 1.0f);
@@ -293,7 +303,6 @@ void KeybindsRender() {
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::options", "Options");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::graphics", "Graphics Settings");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::quests", "Quests Page");
-        ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::mobile_ui", "Open Mobile UI");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::reset_level", "Reset Level");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::practice_mode", "Practice Mode");
         ImGuiWidgetConfig::DrawCustomKeybindButton("shortcut::reset_volume", "Reset Volume");
@@ -509,25 +518,39 @@ void RenderMain() {
     if (GDH::Recorder::get().isRecording()) RenderRecordingBadge();
     
 #ifdef GEODE_IS_ANDROID
+    // One persistent, draggable touch control. It stays available while the
+    // GDH panels are closed, so the menu can always be reopened.
     {
         ImGuiIO& touchIO = ImGui::GetIO();
-        const float scale = std::max(
-            0.65f,
-            std::min(touchIO.DisplaySize.x / 1280.0f, touchIO.DisplaySize.y / 720.0f)
+        const float scale = std::clamp(
+            std::min(touchIO.DisplaySize.x / 1280.0f, touchIO.DisplaySize.y / 720.0f),
+            0.70f, 1.15f
         );
+        static ImVec2 togglePos(12.0f, 70.0f);
+        static bool togglePosInitialized = false;
+        const ImVec2 toggleSize(148.0f * scale, 42.0f * scale);
+        if (!togglePosInitialized) {
+            togglePos = ImVec2(12.0f * scale, 70.0f * scale);
+            togglePosInitialized = true;
+        }
 
-        ImGui::SetNextWindowPos(ImVec2(12.0f * scale, 70.0f * scale), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(120.0f * scale, 44.0f * scale), ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.72f);
+        ImGui::SetNextWindowPos(togglePos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(toggleSize, ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.82f);
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoResize;
 
-        if (ImGui::Begin(
-            "##GDH_TouchToggle",
-            nullptr,
-            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings |
-            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
-        )) {
-            if (ImGui::Button(g_show ? "X  Close menu" : "Open GDH menu", ImVec2(-1.0f, -1.0f))) {
+        if (ImGui::Begin("##GDH_TouchToggle", nullptr, flags)) {
+            // Drag the small title strip to reposition the toggle.
+            ImGui::InvisibleButton("##GDH_DragToggle", ImVec2(-1.0f, 7.0f * scale));
+            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                togglePos.x += touchIO.MouseDelta.x;
+                togglePos.y += touchIO.MouseDelta.y;
+                togglePos.x = std::clamp(togglePos.x, 0.0f, std::max(0.0f, touchIO.DisplaySize.x - toggleSize.x));
+                togglePos.y = std::clamp(togglePos.y, 0.0f, std::max(0.0f, touchIO.DisplaySize.y - toggleSize.y));
+            }
+            if (ImGui::Button(g_show ? "X  Close GDH" : "Open GDH", ImVec2(-1.0f, -1.0f))) {
                 ToggleUI();
             }
         }
