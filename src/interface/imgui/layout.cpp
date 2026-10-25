@@ -2,6 +2,8 @@
 #include "widgetH.hpp"
 #include <imgui.h>
 #include "../../core/config.hpp"
+#include <algorithm>
+#include <cmath>
 
 void GDH::Layout::Manager::setLayout(const std::vector<std::vector<std::string>>& layout) {
     m_layout = layout;
@@ -9,6 +11,27 @@ void GDH::Layout::Manager::setLayout(const std::vector<std::vector<std::string>>
 
 void GDH::Layout::Manager::setFixedWindowSizeInfo(const std::vector<GDH::Layout::WindowInfo>& fixedWindows) {
     m_fixedWindows = fixedWindows;
+}
+
+void GDH::Layout::Manager::setPanelScale(float scale) {
+    m_panelScale = std::clamp(scale, 0.60f, 1.50f);
+    if (m_isBaseCollected && !m_baseWindows.empty()) {
+        calculateWindowPositions();
+    }
+}
+
+void GDH::Layout::Manager::setWindowCollapsed(const std::string& name, bool collapsed) {
+    auto it = m_collapsedWindows.find(name);
+    if (it != m_collapsedWindows.end() && it->second == collapsed) return;
+    // Register the default expanded state without recalculating the entire layout.
+    if (it == m_collapsedWindows.end() && !collapsed) {
+        m_collapsedWindows.emplace(name, false);
+        return;
+    }
+    m_collapsedWindows[name] = collapsed;
+    if (m_isBaseCollected && !m_baseWindows.empty()) {
+        calculateWindowPositions();
+    }
 }
 
 void GDH::Layout::Manager::startCollecting() {
@@ -47,11 +70,11 @@ bool GDH::Layout::Manager::applyWindowTransform(const std::string& name) {
     if (m_stage == Stage::Applying) {
         WindowInfo* info = getWindowInfo(name);
         if (info) {
-            ImGui::SetNextWindowPos(ImVec2(info->x * m_windowScale, info->y * m_windowScale), ImGuiCond_Always);
+            ImGui::SetNextWindowPos(ImVec2(info->x, info->y), ImGuiCond_Always);
 
-            // Keep the original layout while allowing a user-controlled Android panel scale.
-            // The small height increment prevents unnecessary scrollbars in ImGui.
-            ImGui::SetNextWindowSize(ImVec2(info->w * m_windowScale, (info->h + 3.f) * m_windowScale), ImGuiCond_Always);
+            // imgui so badly calculating height of window
+            // so i use a hardcoded increment to prevent unnecessary scrollbars
+            ImGui::SetNextWindowSize(ImVec2(info->w, info->h + 3.f), ImGuiCond_Always);
             return true;
         }
     }
@@ -119,7 +142,9 @@ float GDH::Layout::Manager::getColumnHeight(const std::vector<std::string>& colu
     for (size_t i = 0; i < column.size(); i++) {
         WindowInfo* window = findWindow(column[i]);
         if (window) {
-            total_height += window->h;
+            auto collapsed = m_collapsedWindows.find(column[i]);
+            const bool isCollapsed = collapsed != m_collapsedWindows.end() && collapsed->second;
+            total_height += isCollapsed ? ImGui::GetFrameHeight() : window->h;
             if (i < column.size() - 1) {
                 total_height += SPACING_Y;
             }
@@ -145,8 +170,8 @@ void GDH::Layout::Manager::calculateWindowPositions() {
 
     for (const auto& column : m_layout) {
         float col_width = getMaxWidthInColumn(column);
-        float col_height = getColumnHeight(column) + (PADDING_Y * 2);
-        total_width += col_width + PADDING_X;
+        float col_height = (getColumnHeight(column) * m_panelScale) + (PADDING_Y * 2);
+        total_width += (col_width * m_panelScale) + PADDING_X;
         if (col_height > max_layout_height) max_layout_height = col_height;
     }
 
@@ -187,7 +212,7 @@ void GDH::Layout::Manager::calculateWindowPositions() {
         float total_scaled_width = PADDING_X * m_scale;
         for (const auto& column : m_layout) {
             float col_width = getMaxWidthInColumn(column);
-            total_scaled_width += (col_width * m_scale) + (PADDING_X * m_scale);
+            total_scaled_width += (col_width * m_scale * m_panelScale) + (PADDING_X * m_scale);
         }
 
         if (display.x > total_scaled_width) {
@@ -198,7 +223,7 @@ void GDH::Layout::Manager::calculateWindowPositions() {
     for (const auto& column : m_layout) {
         float max_width = getMaxWidthInColumn(column);
         float current_y = PADDING_Y * m_scale;
-        float scaled_max_width = max_width * m_scale;
+        float scaled_max_width = max_width * m_scale * m_panelScale;
         
         for (const auto& name : column) {
             WindowInfo* window = findWindow(name);
@@ -207,9 +232,14 @@ void GDH::Layout::Manager::calculateWindowPositions() {
                 window->y = current_y;
 
                 window->w = scaled_max_width;
-                window->h = window->h * m_scale;
-                
-                current_y += window->h + SPACING_Y * m_scale;
+                window->h = window->h * m_scale * m_panelScale;
+
+                auto collapsed = m_collapsedWindows.find(name);
+                const bool isCollapsed = collapsed != m_collapsedWindows.end() && collapsed->second;
+                const float visibleHeight = isCollapsed
+                    ? ImGui::GetFrameHeight() * m_panelScale
+                    : window->h;
+                current_y += visibleHeight + SPACING_Y * m_scale;
             }
         }
         
