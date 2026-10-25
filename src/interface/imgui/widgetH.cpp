@@ -1394,15 +1394,20 @@ namespace ImGuiH {
         ImGuiIO& io = ImGui::GetIO();
         float dt = io.DeltaTime;
         bool hov = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+        // Scrolling is limited to the inner content rectangle. The title bar
+        // remains a dedicated drag handle, so grabbing a panel title never
+        // scrolls its contents. This also avoids stealing touches from buttons.
+        ImGuiWindow* currentWindow = ImGui::GetCurrentWindow();
+        const bool overContent = hov && currentWindow->InnerRect.Contains(io.MousePos);
 
-        if (hov && io.MouseWheel != 0.f) {
+        if (overContent && io.MouseWheel != 0.f) {
             s.t -= io.MouseWheel * 40.f;
             io.MouseWheel = 0.f;
         }
 
-        // Android touch input is delivered as mouse dragging. Let users swipe
-        // vertically over the panel contents to scroll long lists of hacks.
-        if (hov && io.MouseDown[0] && ImGui::IsMouseDragging(0, 2.0f)) {
+        // Android touch input is delivered as mouse dragging. Swipe inside
+        // the content area like a web page; title-bar drags are left to ImGui.
+        if (overContent && io.MouseDown[0] && ImGui::IsMouseDragging(0, 2.0f)) {
             s.t -= io.MouseDelta.y;
         }
 
