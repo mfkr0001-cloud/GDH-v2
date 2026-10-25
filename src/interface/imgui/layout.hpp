@@ -19,6 +19,9 @@ namespace GDH { namespace Layout {
         void setLayout(const std::vector<std::vector<std::string>>& layout);        
         void setFixedWindowSizeInfo(const std::vector<WindowInfo>& fixedWindows);
         void setPanelScale(float scale);
+        void setLayoutOffset(float x, float y);
+        float getLayoutOffsetX() const { return m_offsetX; }
+        float getLayoutOffsetY() const { return m_offsetY; }
         void setWindowCollapsed(const std::string& name, bool collapsed);
         float getPanelScale() const { return m_panelScale; }        
 
@@ -66,6 +69,9 @@ namespace GDH { namespace Layout {
         bool m_isBaseCollected = false;
         float m_scale = 1.0f;
         float m_panelScale = 1.0f;
+        float m_offsetX = 0.0f;
+        float m_offsetY = 0.0f;
+        bool m_groupMoveActive = false;
         
         const float PADDING_X = 10.0f;
         const float PADDING_Y = 10.0f;
