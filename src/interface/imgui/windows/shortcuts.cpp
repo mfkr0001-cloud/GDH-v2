@@ -1,4 +1,4 @@
-#if defined(GEODE_IS_DESKTOP) || defined(GEODE_IS_ANDROID)
+#ifdef GEODE_IS_DESKTOP
 #include "imgui.h"
 #include <Geode/Geode.hpp>
 #include "../../../core/gui.hpp"
@@ -10,6 +10,9 @@
 #include "../widgetH.hpp"
 #include <imgui-cocos.hpp>
 #include "../../cocos/hacks_layer.hpp"
+
+// Implemented by the ImGui menu controller in imgui.cpp.
+void ToggleUI();
 
 static bool areShortcutsEnabled() {
     return Config::get().get<bool>("shortcuts::enable", false);
@@ -29,8 +32,8 @@ $execute {
     kb.addCallback("shortcut::options", geode::Keybind(), [](bool r) { if (!r && areShortcutsEnabled()) GDH::Shortcuts::openOptions(); });
     kb.addCallback("shortcut::graphics", geode::Keybind(), [](bool r) { if (!r && areShortcutsEnabled()) GDH::Shortcuts::openGraphicsSettings(); });
     kb.addCallback("shortcut::quests", geode::Keybind(), [](bool r) { if (!r && areShortcutsEnabled()) GDH::Shortcuts::openQuests(); });
-    kb.addCallback("shortcut::mobile_ui", geode::Keybind(), [](bool r) { 
-        if (!r && areShortcutsEnabled()) HacksLayer::isOpened() ? HacksLayer::get()->onClose(nullptr) : HacksLayer::get()->show(); 
+    kb.addCallback("shortcut::mobile_ui", geode::Keybind(), [](bool r) {
+        if (!r && areShortcutsEnabled()) ToggleUI();
     });
     kb.addCallback("shortcut::reset_level", geode::Keybind(), [](bool r) { if (!r && areShortcutsEnabled()) GDH::Shortcuts::resetLevel(); });
     kb.addCallback("shortcut::practice_mode", geode::Keybind(), [](bool r) { if (!r && areShortcutsEnabled()) GDH::Shortcuts::togglePracticeMode(); });
@@ -137,8 +140,8 @@ $execute {
         if (ImGuiH::Button("Quests Page", {width, 0.f}))
             GDH::Shortcuts::openQuests();
 
-        if (ImGuiH::Button("Open Mobile UI", {width, 0.f}))
-            HacksLayer::isOpened() ? HacksLayer::get()->onClose(nullptr) : HacksLayer::get()->show();
+        if (ImGuiH::Button("Toggle GDH Menu", {width, 0.f}))
+            ToggleUI();
 
         if (ImGuiH::Button("Reset Level", {width, 0.f})) 
             GDH::Shortcuts::resetLevel();
