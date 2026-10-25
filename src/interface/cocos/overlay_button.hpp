@@ -28,5 +28,6 @@ public:
     void setVisible(bool visible) override;
     
     void setSizeScale(float scale);
+    void setMinOpacity(float opacity);
     float getSizeScale() const { return m_scale; }
 };
