@@ -1400,6 +1400,12 @@ namespace ImGuiH {
             io.MouseWheel = 0.f;
         }
 
+        // Android touch input is delivered as mouse dragging. Let users swipe
+        // vertically over the panel contents to scroll long lists of hacks.
+        if (hov && io.MouseDown[0] && ImGui::IsMouseDragging(0, 2.0f)) {
+            s.t -= io.MouseDelta.y;
+        }
+
         float maxY = ImMax(0.f, s.h - s.wh);
         s.t = ImClamp(s.t, 0.f, maxY);
 
