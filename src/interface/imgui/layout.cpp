@@ -47,11 +47,11 @@ bool GDH::Layout::Manager::applyWindowTransform(const std::string& name) {
     if (m_stage == Stage::Applying) {
         WindowInfo* info = getWindowInfo(name);
         if (info) {
-            ImGui::SetNextWindowPos(ImVec2(info->x, info->y), ImGuiCond_Always);
+            ImGui::SetNextWindowPos(ImVec2(info->x * m_windowScale, info->y * m_windowScale), ImGuiCond_Always);
 
-            // imgui so badly calculating height of window
-            // so i use a hardcoded increment to prevent unnecessary scrollbars
-            ImGui::SetNextWindowSize(ImVec2(info->w, info->h + 3.f), ImGuiCond_Always);
+            // Keep the original layout while allowing a user-controlled Android panel scale.
+            // The small height increment prevents unnecessary scrollbars in ImGui.
+            ImGui::SetNextWindowSize(ImVec2(info->w * m_windowScale, (info->h + 3.f) * m_windowScale), ImGuiCond_Always);
             return true;
         }
     }
