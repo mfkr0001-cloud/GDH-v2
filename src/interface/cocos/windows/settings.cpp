@@ -13,10 +13,12 @@ $execute {
 
     window.setCustomWindowCocos([&config, &gui](cocos2d::CCNode* node) {
         auto tab = static_cast<HacksTab*>(node);
-        tab->addConfigFloatInput("Icon Size (0.5 - 3)", "ui_icon.scale", 0.5f, 0.25f, 3.f, [](float val) {
+        tab->addConfigFloatInput("Floating Button Size (0.1 - 5)", "ui_icon.scale", 0.5f, 0.1f, 5.f, [](float val) {
             OverlayButton::get()->setSizeScale(val);
         });
-        tab->addConfigFloatInput("Min Opacity (0.25 - 1.f)", "ui_icon.minOpacity", 0.8f);
+        tab->addConfigFloatInput("Button Transparency (0 - 1)", "ui_icon.minOpacity", 0.2f, 0.f, 1.f, [](float val) {
+            OverlayButton::get()->setMinOpacity(val);
+        });
         
         tab->addSeparator();
         tab->prepareNewRow();
