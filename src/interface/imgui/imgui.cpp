@@ -596,6 +596,25 @@ void RenderMain() {
 
     KeybindsRender();
 
+#ifdef GEODE_IS_ANDROID
+    // One draggable handle translates every GDH panel together.
+    {
+        const float offsetX = layoutManager.getLayoutOffsetX();
+        const float offsetY = layoutManager.getLayoutOffsetY();
+        ImGui::SetNextWindowPos(ImVec2(12.0f + offsetX, 12.0f + offsetY), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.88f);
+        if (ImGui::Begin("Move all tabs", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
+            ImGui::TextUnformatted("Hold and drag to move all panels");
+            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && ImGui::IsMouseDragging(0, 1.0f)) {
+                const ImVec2 delta = io.MouseDelta;
+                layoutManager.setLayoutOffset(offsetX + delta.x, offsetY + delta.y);
+            }
+        }
+        ImGui::End();
+    }
+#endif
+
     for (auto& window : windows) {
         std::string windowName = window.getName();
         if (windowName == "Invisible" || windowName == "Settings" || windowName == "Search") continue;
