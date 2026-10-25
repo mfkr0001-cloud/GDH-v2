@@ -1409,6 +1409,10 @@ namespace ImGuiH {
         // the content area like a web page; title-bar drags are left to ImGui.
         if (overContent && io.MouseDown[0] && ImGui::IsMouseDragging(0, 2.0f)) {
             s.t -= io.MouseDelta.y;
+            // Once a touch becomes a scroll gesture, cancel the button that
+            // was pressed at the start. This removes its pressed/dark state
+            // and prevents an accidental click when the finger is released.
+            ImGui::ClearActiveID();
         }
 
         float maxY = ImMax(0.f, s.h - s.wh);
