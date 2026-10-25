@@ -14,7 +14,7 @@ void GDH::Layout::Manager::setFixedWindowSizeInfo(const std::vector<GDH::Layout:
 }
 
 void GDH::Layout::Manager::setPanelScale(float scale) {
-    m_panelScale = std::clamp(scale, 0.60f, 1.50f);
+    m_panelScale = std::clamp(scale, 0.25f, 3.00f);
     if (m_isBaseCollected && !m_baseWindows.empty()) {
         calculateWindowPositions();
     }
