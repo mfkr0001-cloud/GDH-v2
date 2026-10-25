@@ -566,10 +566,10 @@ void RenderMain() {
         }
         ImGui::SetNextItemWidth(150.0f);
         ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.50f, 3.00f, "%.2fx");
-        if (ImGui::SliderFloat("Panel size", &g_androidPanelScale, 0.60f, 1.50f, "%.2fx")) {
+        if (ImGui::SliderFloat("Panel size", &g_androidPanelScale, 0.25f, 3.00f, "%.2fx")) {
             GDH::Layout::Manager::get().setPanelScale(g_androidPanelScale);
         }
-        ImGui::SliderFloat("Button size", &g_androidButtonScale, 0.60f, 1.80f, "%.2fx");
+        ImGui::SliderFloat("Button size", &g_androidButtonScale, 0.25f, 3.00f, "%.2fx");
         io.FontGlobalScale = g_androidUiScale;
     }
     ImGui::End();
