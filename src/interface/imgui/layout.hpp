@@ -60,6 +60,7 @@ namespace GDH { namespace Layout {
         
         bool m_isBaseCollected = false;
         float m_scale = 1.0f;
+        float m_windowScale = 1.0f;
         
         const float PADDING_X = 10.0f;
         const float PADDING_Y = 10.0f;
