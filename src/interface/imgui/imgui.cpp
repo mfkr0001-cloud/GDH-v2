@@ -4,6 +4,7 @@
 #include <imgui-cocos.hpp>
 #include <imgui_internal.h>
 #include <imgui_stdlib.h>
+#include <unordered_map>
 #include "layout.hpp"
 
 #include "widgetH.hpp"
@@ -30,7 +31,12 @@ static bool g_show = false;
 #ifdef GEODE_IS_ANDROID
 // Scale for Android: can be adjusted from the persistent floating control.
 static float g_androidUiScale = 1.0f;
+static float g_androidWindowScale = 1.0f;
+static float g_androidButtonScale = 1.0f;
 static bool g_androidControlOpen = false;
+// Collapsed state is kept per panel so a title-bar tap can toggle it on Android.
+static std::unordered_map<std::string, bool> g_androidCollapsed;
+static std::unordered_map<std::string, bool> g_androidTitleTogglePending;
 #endif
 
 static bool g_showThemeEditor = false;
@@ -504,15 +510,21 @@ void RenderMain() {
     // Move it by dragging the title bar. The scale slider is intentionally independent
     // of the launcher visibility so the menu can always be reopened.
     ImGui::SetNextWindowPos(ImVec2(18.0f, 90.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(190.0f, 112.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(230.0f, 190.0f), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowBgAlpha(0.88f);
     if (ImGui::Begin("GDH launcher", nullptr,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
         if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(150.0f, 48.0f))) {
             ToggleUI();
         }
-        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SetNextItemWidth(190.0f);
         ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.50f, 3.00f, "%.2fx");
+        ImGui::SetNextItemWidth(190.0f);
+        if (ImGui::SliderFloat("Panel size", &g_androidWindowScale, 0.60f, 1.25f, "%.2fx")) {
+            GDH::Layout::Manager::get().setWindowScale(g_androidWindowScale);
+        }
+        ImGui::SetNextItemWidth(190.0f);
+        ImGui::SliderFloat("Button size", &g_androidButtonScale, 0.60f, 1.80f, "%.2fx");
         io.FontGlobalScale = g_androidUiScale;
     }
     ImGui::End();
@@ -544,12 +556,45 @@ void RenderMain() {
         if (windowName == "Invisible" || windowName == "Settings" || windowName == "Search") continue;
         
         const bool isReplayEngineWindow = (windowName == "Replay Engine");
-        // Keep Replay Engine on the layout manager's original position and size.
-        // Do not force a larger Android-only window; that can cover the bot UI
-        // and ignores the user's saved layout.
+        // Preserve the layout, but allow the user to scale panel dimensions on Android.
         layoutManager.applyWindowTransform(windowName);
-        (windowName == "Framerate" || isReplayEngineWindow) ? ImGui::Begin(windowName.c_str()) : ImGuiH::BeginSmoothScroll(windowName.c_str());
-        
+#ifdef GEODE_IS_ANDROID
+        auto pendingToggle = g_androidTitleTogglePending.find(windowName);
+        if (pendingToggle != g_androidTitleTogglePending.end() && pendingToggle->second) {
+            const bool wasCollapsed = g_androidCollapsed[windowName];
+            ImGui::SetNextWindowCollapsed(!wasCollapsed, ImGuiCond_Always);
+            pendingToggle->second = false;
+        }
+#endif
+        const bool windowContentsVisible = (windowName == "Framerate" || isReplayEngineWindow)
+            ? ImGui::Begin(windowName.c_str())
+            : ImGuiH::BeginSmoothScroll(windowName.c_str());
+
+#ifdef GEODE_IS_ANDROID
+        // Keep native arrow-button collapsing, and also allow a single tap on the title text.
+        ImGuiWindow* currentWindow = ImGui::GetCurrentWindow();
+        if (currentWindow) {
+            g_androidCollapsed[windowName] = ImGui::IsWindowCollapsed();
+            const ImRect titleRect = currentWindow->TitleBarRect();
+            const ImVec2 mouse = ImGui::GetIO().MousePos;
+            const bool inTitleTextArea = titleRect.Contains(mouse) &&
+                mouse.x < titleRect.Max.x - ImGui::GetFrameHeight() * 1.5f &&
+                mouse.x > titleRect.Min.x + 4.0f;
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && inTitleTextArea) {
+                g_androidTitleTogglePending[windowName] = true;
+            }
+        }
+        const float previousFontScale = io.FontGlobalScale;
+        if (windowContentsVisible) {
+            io.FontGlobalScale = previousFontScale * g_androidButtonScale;
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImGui::GetStyle().FramePadding * g_androidButtonScale);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemSpacing * g_androidButtonScale);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImGui::GetStyle().ItemInnerSpacing * g_androidButtonScale);
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ImGui::GetStyle().FrameRounding * g_androidButtonScale);
+        }
+#endif
+        if (windowContentsVisible) {
         if (window.avaibleCustomWindowImGui()) window.callCustomWindowImGui();
 
         for (auto& hack : window.getHacks()) {
@@ -589,8 +634,15 @@ void RenderMain() {
             }
             ImGui::PopStyleVar();
         }
+        }
+#ifdef GEODE_IS_ANDROID
+        if (windowContentsVisible) {
+            ImGui::PopStyleVar(4);
+        }
+        io.FontGlobalScale = previousFontScale;
+#endif
 
-        if (layoutManager.isCollecting()) {
+        if (layoutManager.isCollecting() && !ImGui::IsWindowCollapsed()) {
             auto size = ImGui::GetWindowSize();
             layoutManager.addWindowInfo(windowName, size.x, size.y);
         }
