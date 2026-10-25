@@ -5,6 +5,9 @@
 #include <imgui_internal.h>
 #include <imgui_stdlib.h>
 #include "layout.hpp"
+#ifdef GEODE_IS_ANDROID
+#include "../cocos/overlay_button.hpp"
+#endif
 
 #include "widgetH.hpp"
 #include "widget_helper.hpp"
@@ -70,8 +73,9 @@ static std::vector<GDH::Layout::WindowInfo> g_fixedWindowSizes = {
     {"Replay Engine", 300.f, 225.f},
     {"Keybinds", 0.f, 180.f},
     {"Level", 0.f, 1080.f},
-    {"Shortcuts", 180.f, 0.f},
+    {"Shortcuts", 260.f, 0.f},
     {"GDH Settings", 225.f, 0.f},
+    {"Menu Size", 390.f, 0.f},
 };
 
 void onOpen() {
@@ -287,13 +291,35 @@ static void MenuSizeRender() {
             layoutManager.setPanelScale(g_androidPanelScale);
         }
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::SliderFloat("Button size", &g_androidButtonScale, 0.25f, 3.00f, "%.2fx");
-        ImGui::TextWrapped("Menu scale changes overall UI/text size. Panel size changes menu panels. Button size changes button padding and spacing.");
+        ImGui::SliderFloat("Button spacing", &g_androidButtonScale, 0.25f, 3.00f, "%.2fx");
+
+        ImGui::Separator();
+        ImGui::TextUnformatted("Floating GDH button");
+        auto& uiConfig = Config::get();
+        float floatingButtonSize = uiConfig.get<float>("ui_icon.scale", 0.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::InputFloat("Button size (0.1–5)", &floatingButtonSize, 0.1f, 0.5f, "%.2f")) {
+            floatingButtonSize = std::clamp(floatingButtonSize, 0.1f, 5.0f);
+            uiConfig.set<float>("ui_icon.scale", floatingButtonSize);
+            OverlayButton::get()->setSizeScale(floatingButtonSize);
+        }
+        float floatingButtonOpacity = uiConfig.get<float>("ui_icon.minOpacity", 0.2f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::SliderFloat("Button transparency (0 = invisible)", &floatingButtonOpacity, 0.0f, 1.0f, "%.2f")) {
+            floatingButtonOpacity = std::clamp(floatingButtonOpacity, 0.0f, 1.0f);
+            uiConfig.set<float>("ui_icon.minOpacity", floatingButtonOpacity);
+            OverlayButton::get()->setMinOpacity(floatingButtonOpacity);
+        }
+        ImGui::TextWrapped("Menu scale changes overall UI/text size. Panel size changes menu panels. Button spacing changes padding and spacing.");
         if (ImGuiH::Button("Reset sizes", {ImGui::GetContentRegionAvail().x, 0.0f})) {
             g_androidUiScale = 1.0f;
             g_androidPanelScale = 1.0f;
             g_androidButtonScale = 1.0f;
             layoutManager.setPanelScale(1.0f);
+            uiConfig.set<float>("ui_icon.scale", 0.5f);
+            uiConfig.set<float>("ui_icon.minOpacity", 0.2f);
+            OverlayButton::get()->setSizeScale(0.5f);
+            OverlayButton::get()->setMinOpacity(0.2f);
         }
     }
     if (layoutManager.isCollecting()) {
@@ -585,21 +611,6 @@ void RenderMain() {
     ImGuiH::RenderPopups();
     if (GDH::Recorder::get().isRecording()) RenderRecordingBadge();
 
-#ifdef GEODE_IS_ANDROID
-    // A compact toggle only: the old mobile popup menu is no longer used.
-    // The launcher button becomes an X while the PC-style ImGui menu is open.
-    const float toggleWidth = g_show ? 44.0f : 72.0f;
-    ImGui::SetNextWindowPos(ImVec2(std::max(8.0f, io.DisplaySize.x - toggleWidth - 12.0f), 12.0f), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.92f);
-    if (ImGui::Begin("GDH quick toggle##Android", nullptr,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
-        if (ImGui::Button(g_show ? "X" : "GDH", ImVec2(toggleWidth, 38.0f))) {
-            ToggleUI();
-        }
-    }
-    ImGui::End();
-#endif
 
     if (!g_show) return;
 
