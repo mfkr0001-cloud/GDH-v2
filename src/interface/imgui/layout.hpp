@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace GDH { namespace Layout {
     struct WindowInfo {
@@ -16,7 +17,10 @@ namespace GDH { namespace Layout {
         }
 
         void setLayout(const std::vector<std::vector<std::string>>& layout);        
-        void setFixedWindowSizeInfo(const std::vector<WindowInfo>& fixedWindows);        
+        void setFixedWindowSizeInfo(const std::vector<WindowInfo>& fixedWindows);
+        void setPanelScale(float scale);
+        void setWindowCollapsed(const std::string& name, bool collapsed);
+        float getPanelScale() const { return m_panelScale; }        
 
         void startCollecting();       
         bool isCollecting();        
@@ -55,12 +59,13 @@ namespace GDH { namespace Layout {
         std::vector<WindowInfo> m_fixedWindows;
         std::vector<WindowInfo> m_baseWindows;
         std::vector<std::vector<std::string>> m_layout;
+        std::unordered_map<std::string, bool> m_collapsedWindows;
         Stage m_stage = Stage::Idle;
 
         
         bool m_isBaseCollected = false;
         float m_scale = 1.0f;
-        float m_windowScale = 1.0f;
+        float m_panelScale = 1.0f;
         
         const float PADDING_X = 10.0f;
         const float PADDING_Y = 10.0f;
