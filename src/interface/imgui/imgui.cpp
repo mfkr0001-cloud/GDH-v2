@@ -59,7 +59,8 @@ static std::vector<std::vector<std::string>> g_layout = {
     {"Replay Engine", "Keybinds"},
     {"Framerate"},
     {"Shortcuts"},
-    {"GDH Settings"}
+    {"GDH Settings"},
+    {"Menu Size"}
 };
 
 static std::vector<GDH::Layout::WindowInfo> g_fixedWindowSizes = {
@@ -270,6 +271,38 @@ void SettingsRender() {
 
     ImGui::End();
 }
+
+#ifdef GEODE_IS_ANDROID
+static void MenuSizeRender() {
+    auto& layoutManager = GDH::Layout::Manager::get();
+    layoutManager.applyWindowTransform("Menu Size");
+    const bool visible = ImGuiH::BeginSmoothScroll("Menu Size");
+    if (visible && !ImGui::IsWindowCollapsed()) {
+        ImGui::TextWrapped("Adjust the PC-style GDH menu and its controls.");
+        ImGui::Separator();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.50f, 3.00f, "%.2fx");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::SliderFloat("Panel size", &g_androidPanelScale, 0.25f, 3.00f, "%.2fx")) {
+            layoutManager.setPanelScale(g_androidPanelScale);
+        }
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::SliderFloat("Button size", &g_androidButtonScale, 0.25f, 3.00f, "%.2fx");
+        ImGui::TextWrapped("Menu scale changes overall UI/text size. Panel size changes menu panels. Button size changes button padding and spacing.");
+        if (ImGuiH::Button("Reset sizes", {ImGui::GetContentRegionAvail().x, 0.0f})) {
+            g_androidUiScale = 1.0f;
+            g_androidPanelScale = 1.0f;
+            g_androidButtonScale = 1.0f;
+            layoutManager.setPanelScale(1.0f);
+        }
+    }
+    if (layoutManager.isCollecting()) {
+        const auto size = ImGui::GetWindowSize();
+        layoutManager.addWindowInfo("Menu Size", size.x, size.y);
+    }
+    ImGuiH::EndSmoothScroll();
+}
+#endif
 
 void KeybindsRender() {
     auto& layoutManager = GDH::Layout::Manager::get();
@@ -553,24 +586,17 @@ void RenderMain() {
     if (GDH::Recorder::get().isRecording()) RenderRecordingBadge();
 
 #ifdef GEODE_IS_ANDROID
-    // Persistent, draggable launcher: it is drawn even while the main menu is closed.
-    // Move it by dragging the title bar. The scale slider is intentionally independent
-    // of the launcher visibility so the menu can always be reopened.
-    ImGui::SetNextWindowPos(ImVec2(18.0f, 90.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(190.0f, 112.0f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowBgAlpha(0.88f);
-    if (ImGui::Begin("GDH launcher", nullptr,
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
-        if (ImGui::Button(g_show ? "Close GDH" : "Open GDH", ImVec2(150.0f, 48.0f))) {
+    // A compact toggle only: the old mobile popup menu is no longer used.
+    // The launcher button becomes an X while the PC-style ImGui menu is open.
+    const float toggleWidth = g_show ? 44.0f : 72.0f;
+    ImGui::SetNextWindowPos(ImVec2(std::max(8.0f, io.DisplaySize.x - toggleWidth - 12.0f), 12.0f), ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.92f);
+    if (ImGui::Begin("GDH quick toggle##Android", nullptr,
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
+        if (ImGui::Button(g_show ? "X" : "GDH", ImVec2(toggleWidth, 38.0f))) {
             ToggleUI();
         }
-        ImGui::SetNextItemWidth(150.0f);
-        ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.50f, 3.00f, "%.2fx");
-        if (ImGui::SliderFloat("Panel size", &g_androidPanelScale, 0.25f, 3.00f, "%.2fx")) {
-            GDH::Layout::Manager::get().setPanelScale(g_androidPanelScale);
-        }
-        ImGui::SliderFloat("Button size", &g_androidButtonScale, 0.25f, 3.00f, "%.2fx");
-        io.FontGlobalScale = g_androidUiScale;
     }
     ImGui::End();
 #endif
@@ -587,6 +613,9 @@ void RenderMain() {
 
     RenderVersionBadge();
     SettingsRender();
+#ifdef GEODE_IS_ANDROID
+    MenuSizeRender();
+#endif
     notifyUpdate();
 
     if (g_showThemeEditor) {
