@@ -45,10 +45,6 @@ $execute {
                         if (HacksLayer::isOpened()) {
                             HacksLayer::get()->onClose(nullptr);
                         }
-
-                        geode::queueInMainThread([]() {
-                            HacksLayer::get()->show();
-                        });
                     }
                 })
             );
