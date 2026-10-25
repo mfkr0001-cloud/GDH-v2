@@ -13,6 +13,12 @@ void GDH::Layout::Manager::setFixedWindowSizeInfo(const std::vector<GDH::Layout:
     m_fixedWindows = fixedWindows;
 }
 
+void GDH::Layout::Manager::setLayoutOffset(float x, float y) {
+    m_offsetX = x;
+    m_offsetY = y;
+    m_groupMoveActive = true;
+}
+
 void GDH::Layout::Manager::setPanelScale(float scale) {
     m_panelScale = std::clamp(scale, 0.25f, 3.00f);
     if (m_isBaseCollected && !m_baseWindows.empty()) {
@@ -67,10 +73,10 @@ bool GDH::Layout::Manager::applyWindowTransform(const std::string& name) {
         return true;
     }
 
-    if (m_stage == Stage::Applying) {
+    if (m_stage == Stage::Applying || m_groupMoveActive) {
         WindowInfo* info = getWindowInfo(name);
         if (info) {
-            ImGui::SetNextWindowPos(ImVec2(info->x, info->y), ImGuiCond_Always);
+            ImGui::SetNextWindowPos(ImVec2(info->x + m_offsetX, info->y + m_offsetY), ImGuiCond_Always);
 
             // imgui so badly calculating height of window
             // so i use a hardcoded increment to prevent unnecessary scrollbars
