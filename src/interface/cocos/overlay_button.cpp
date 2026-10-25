@@ -136,7 +136,8 @@ void OverlayButton::registerWithTouchDispatcher() {
 }
 
 #ifdef GEODE_IS_MOBILE
-#include "hacks_layer.hpp"      
+#include "hacks_layer.hpp"
+extern void ToggleUI();      
 
 static bool inited = false;
 class $modify(CocosInitMenuLayer, MenuLayer) {
@@ -147,7 +148,7 @@ class $modify(CocosInitMenuLayer, MenuLayer) {
             auto button = OverlayButton::get();
             button->setID("gdh.toggle.ui"_spr);
             button->setCallback([]() {
-                HacksLayer::isOpened() ? HacksLayer::get()->onClose(nullptr) : HacksLayer::get()->show();
+                ToggleUI();
             });
             OverlayManager::get()->addChild(button);
         }
