@@ -31,7 +31,7 @@ bool OverlayButton::init(const char* file) {
     m_sprite = CCSprite::create(file);
     m_sprite->setScale(m_scale);
 
-    float m_minOpacity = config.get<float>("ui_icon.minOpacity", 0.80f);
+    float m_minOpacity = std::clamp(config.get<float>("ui_icon.minOpacity", 0.2f), 0.0f, 1.0f);
     m_sprite->setOpacity(m_minOpacity * 255);
 
     m_sprite->setPosition({
@@ -52,11 +52,17 @@ bool OverlayButton::init(const char* file) {
 }
 
 void OverlayButton::setSizeScale(float scale) {
-    m_scale = scale;
+    m_scale = std::clamp(scale, 0.1f, 5.0f);
     if (m_sprite) {
         m_sprite->setScale(m_scale);
     }
     Config::get().set<float>("ui_icon.scale", m_scale);
+}
+
+void OverlayButton::setMinOpacity(float opacity) {
+    opacity = std::clamp(opacity, 0.0f, 1.0f);
+    Config::get().set<float>("ui_icon.minOpacity", opacity);
+    if (m_sprite) m_sprite->setOpacity(static_cast<GLubyte>(opacity * 255.0f));
 }
 
 void OverlayButton::setVisible(bool visible) {
@@ -114,7 +120,7 @@ void OverlayButton::ccTouchEnded(CCTouch*, CCEvent*) {
     m_sprite->stopAllActions();
     m_sprite->runAction(CCEaseBackOut::create(CCScaleTo::create(0.25f, m_scale)));
 
-    float m_minOpacity = Config::get().get<float>("ui_icon.minOpacity", 0.80f);
+    float m_minOpacity = std::clamp(Config::get().get<float>("ui_icon.minOpacity", 0.2f), 0.0f, 1.0f);
     m_sprite->runAction(CCSequence::create(
         CCDelayTime::create(0.8f),
         CCFadeTo::create(0.3f, m_minOpacity * 255),
