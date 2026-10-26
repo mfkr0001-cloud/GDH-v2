@@ -6,6 +6,7 @@
 #include "../widget_helper.hpp"
 #include "../layout.hpp"
 #include "../widgetH.hpp"
+#include <algorithm>
 
 $execute {
     auto& gui = GDH::Gui::get();
@@ -15,7 +16,7 @@ $execute {
 
     window.setCustomWindowImGui([&config, &layout] {
         ImGui::TextUnformatted("Heavy Ship");
-        ImGui::TextWrapped("Makes the ship respond more slowly to direction changes, helping with straight fly. It does not unlock FPS or change the screen refresh rate.");
+        ImGui::TextWrapped("Adds inertia to the ship's vertical movement to make straight fly easier. It does not change your screen refresh rate.");
         ImGui::Spacing();
 
         float strength = config.get<float>("fps.heavy_ship::strength", 55.f);
@@ -24,12 +25,12 @@ $execute {
             strength = std::clamp(strength, 0.f, 90.f);
             config.set<float>("fps.heavy_ship::strength", strength);
         }
-        ImGui::TextDisabled("0%% = normal ship, 90%% = very heavy response");
+        ImGui::TextDisabled("0%% = normal response; 90%% = strongest inertia");
         ImGui::Spacing();
         ImGuiH::SpaceSeparator();
         ImGuiWidgetConfig::HackCheckbox("Enable Heavy Ship", "fps.heavy_ship", false);
         ImGui::Spacing();
-        ImGui::TextWrapped("Only affects ship mode. Try 45–65%% first. If the ship feels too sluggish, lower the slider.");
+        ImGui::TextWrapped("Try 45-65%% first. If the ship feels too sluggish, lower the value.");
     });
 }
 #endif
