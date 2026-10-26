@@ -13,43 +13,23 @@ $execute {
     auto& layout = GDH::Layout::Manager::get();
     auto& window = gui.getWindow("FPS");
 
-    window.setCustomWindowImGui([&config, &gui, &layout] {
-        static constexpr int physicsRates[] = {30, 60, 90, 120, 240, 480};
-        float currentRate = config.get<float>("invisible.tps::value", 240.f);
-
-        ImGui::TextUnformatted("Physics update rate");
-        ImGui::TextDisabled("Select how many physics updates run per second.");
+    window.setCustomWindowImGui([&config, &layout] {
+        ImGui::TextUnformatted("Heavy Ship");
+        ImGui::TextWrapped("Makes the ship respond more slowly to direction changes, helping with straight fly. It does not unlock FPS or change the screen refresh rate.");
         ImGui::Spacing();
 
-        const float spacing = ImGui::GetStyle().ItemSpacing.x;
-        const float buttonWidth = (ImGui::GetContentRegionAvail().x - spacing * 2.f) / 3.f;
-        for (int i = 0; i < 6; ++i) {
-            const int rate = physicsRates[i];
-            const bool selected = (static_cast<int>(currentRate + 0.5f) == rate);
-            if (selected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            char label[24];
-            snprintf(label, sizeof(label), "%d TPS", rate);
-            if (ImGui::Button(label, ImVec2(buttonWidth, layout.multipleScale(48.f)))) {
-                config.set<float>("invisible.tps::value", static_cast<float>(rate));
-                if (config.get<bool>("invisible.lock_delta::sync_tps", true))
-                    config.set<float>("invisible.lock_delta::value", static_cast<float>(rate));
-
-                auto& tpsHack = gui.getWindow("Invisible").findHackByName("TPS");
-                if (tpsHack.getEnabled()) {
-                    tpsHack.disable();
-                    tpsHack.enable();
-                }
-            }
-            if (selected) ImGui::PopStyleColor();
-            if ((i % 3) != 2) ImGui::SameLine();
+        float strength = config.get<float>("fps.heavy_ship::strength", 55.f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::SliderFloat("Ship heaviness", &strength, 0.f, 90.f, "%.0f%%")) {
+            strength = std::clamp(strength, 0.f, 90.f);
+            config.set<float>("fps.heavy_ship::strength", strength);
         }
-
+        ImGui::TextDisabled("0%% = normal ship, 90%% = very heavy response");
         ImGui::Spacing();
         ImGuiH::SpaceSeparator();
-        ImGui::Text("Selected rate: %.0f physics updates/sec", config.get<float>("invisible.tps::value", 240.f));
+        ImGuiWidgetConfig::HackCheckbox("Enable Heavy Ship", "fps.heavy_ship", false);
         ImGui::Spacing();
-        ImGuiWidgetConfig::HackCheckbox("Enable physics rate override", "invisible.tps", false);
-        ImGui::TextWrapped("This changes the existing TPS physics hook, not the screen refresh/FPS limit. Lower rates may change collisions, timing, or level behavior. 480 TPS may be unstable or unsupported by some hooks.");
+        ImGui::TextWrapped("Only affects ship mode. Try 45–65%% first. If the ship feels too sluggish, lower the slider.");
     });
 }
 #endif
