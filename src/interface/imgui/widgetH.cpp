@@ -576,7 +576,7 @@ namespace ImGuiH {
         style.ItemSpacing = ImVec2(8.f * scale, 4.f * scale);
         style.ItemInnerSpacing = ImVec2(4.f * scale, 4.f * scale);
         style.IndentSpacing = 21.f * scale;
-        style.ScrollbarSize = 12.f * scale;
+        style.ScrollbarSize = 20.f * scale; // Wider scrollbars for touch input on Android
         style.GrabMinSize = 12.f * scale;
 
         const bool legacy = isLegacyRender();
