@@ -72,6 +72,7 @@ static std::vector<GDH::Layout::WindowInfo> g_fixedWindowSizes = {
     {"Level", 0.f, 1100.f},
     // {"Labels", 240.f, 380.f},
     {"Replay Engine", 300.f, 225.f},
+    {"FPS", 0.f, 430.f},
     {"Keybinds", 0.f, 180.f},
     {"Level", 0.f, 1080.f},
     {"Shortcuts", 260.f, 0.f},
