@@ -1,1 +1,1 @@
-// Heavy Ship implementation was moved to src/hacks/fps/heavy_ship.cpp.
+// Heavy Ship is implemented and registered in src/hacks/fps/heavy_ship.cpp.
