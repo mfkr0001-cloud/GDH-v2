@@ -11,26 +11,32 @@
 $execute {
     auto& gui = GDH::Gui::get();
     auto& config = Config::get();
-    auto& layout = GDH::Layout::Manager::get();
     auto& window = gui.getWindow("FPS");
 
-    window.setCustomWindowImGui([&config, &layout] {
-        ImGui::TextUnformatted("Heavy Ship");
-        ImGui::TextWrapped("Adds inertia to the ship's vertical movement to make straight fly easier. It does not change your screen refresh rate.");
+    window.setCustomWindowImGui([&config, &gui] {
+        ImGui::TextUnformatted("Wave settings");
+        ImGui::TextWrapped("Short taps can be missed or feel different at 60 Hz. This option keeps a very short wave tap active until a game update can process it.");
         ImGui::Spacing();
 
-        float strength = config.get<float>("fps.heavy_ship::strength", 55.f);
+        ImGuiWidgetConfig::HackCheckbox("Enable Wave Tap Buffer", "fps.wave_response", false);
+
+        float bufferMs = config.get<float>("fps.wave_response::buffer_ms", 8.f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::SliderFloat("Ship heaviness", &strength, 0.f, 90.f, "%.0f%%")) {
-            strength = std::clamp(strength, 0.f, 90.f);
-            config.set<float>("fps.heavy_ship::strength", strength);
+        if (ImGui::SliderFloat("Tap buffer", &bufferMs, 0.f, 20.f, "%.1f ms")) {
+            bufferMs = std::clamp(bufferMs, 0.f, 20.f);
+            config.set<float>("fps.wave_response::buffer_ms", bufferMs);
         }
-        ImGui::TextDisabled("0%% = normal response; 90%% = strongest inertia");
-        ImGui::Spacing();
+        ImGui::TextDisabled("0 ms = off; larger values preserve shorter taps but may make release feel delayed.");
+
+        if (ImGuiH::Button("11.1 ms preset (90 FPS frame time)", ImVec2(ImGui::GetContentRegionAvail().x, 0.f))) {
+            config.set<float>("fps.wave_response::buffer_ms", 11.1f);
+        }
+        if (ImGuiH::Button("Reset to default (8 ms)", ImVec2(ImGui::GetContentRegionAvail().x, 0.f))) {
+            config.set<float>("fps.wave_response::buffer_ms", 8.f);
+        }
+
         ImGuiH::SpaceSeparator();
-        ImGuiWidgetConfig::HackCheckbox("Enable Heavy Ship", "fps.heavy_ship", false);
-        ImGui::Spacing();
-        ImGui::TextWrapped("Try 45-65%% first. If the ship feels too sluggish, lower the value.");
+        ImGui::TextWrapped("This does not unlock 90 FPS or change the screen refresh rate. Test in practice mode first: a large buffer can make wave releases feel late.");
     });
 }
 #endif
