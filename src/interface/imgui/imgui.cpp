@@ -16,6 +16,9 @@
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/CCEGLView.hpp>
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
+#ifdef GEODE_IS_ANDROID
+#include <Geode/modify/CCTouchDispatcher.hpp>
+#endif
 #include <unordered_map>
 
 using namespace geode::prelude;
@@ -36,6 +39,8 @@ static bool g_show = false;
 static float g_androidUiScale = 1.0f;
 static float g_androidButtonScale = 1.0f;
 static float g_androidPanelScale = 1.0f;
+static bool g_androidVirtualMouse = false;
+static ImVec2 g_androidVirtualMousePos = ImVec2(160.0f, 120.0f);
 #endif
 
 static bool g_showThemeEditor = false;
@@ -72,7 +77,7 @@ static std::vector<GDH::Layout::WindowInfo> g_fixedWindowSizes = {
     {"Level", 0.f, 1100.f},
     // {"Labels", 240.f, 380.f},
     {"Replay Engine", 300.f, 225.f},
-    {"FPS", 0.f, 430.f},
+    {"FPS", 0.f, 440.f},
     {"Keybinds", 0.f, 180.f},
     {"Level", 0.f, 1080.f},
     {"Shortcuts", 260.f, 0.f},
@@ -286,6 +291,15 @@ static void MenuSizeRender() {
     if (visible && !ImGui::IsWindowCollapsed()) {
         ImGui::TextWrapped("Adjust the PC-style GDH menu and its controls.");
         ImGui::Separator();
+        auto& config = Config::get();
+        bool virtualMouse = config.get<bool>("ui.android_virtual_mouse", false);
+        if (ImGui::Checkbox("Virtual mouse (PC-style controls)", &virtualMouse)) {
+            g_androidVirtualMouse = virtualMouse;
+            config.set<bool>("ui.android_virtual_mouse", virtualMouse);
+            auto& io = ImGui::GetIO();
+            io.AddMouseButtonEvent(0, false);
+        }
+        ImGui::TextWrapped("When enabled, touches are handled as mouse input while GDH is open. The cursor follows your finger and clicks at that position.");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.50f, 3.00f, "%.2fx");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -566,6 +580,11 @@ void RenderMain() {
     ImGuiIO &io = ImGui::GetIO();
 
 #ifdef GEODE_IS_ANDROID
+    static bool virtualMouseConfigLoaded = false;
+    if (!virtualMouseConfigLoaded) {
+        g_androidVirtualMouse = config.get<bool>("ui.android_virtual_mouse", false);
+        virtualMouseConfigLoaded = true;
+    }
     // Keep a pristine style baseline; never scale sizes that were scaled last frame.
     static ImGuiStyle androidBaseStyle;
     static bool androidBaseStyleCaptured = false;
@@ -630,6 +649,15 @@ void RenderMain() {
     MenuSizeRender();
 #endif
     notifyUpdate();
+#ifdef GEODE_IS_ANDROID
+    if (g_androidVirtualMouse) {
+        ImDrawList* cursorDraw = ImGui::GetForegroundDrawList();
+        cursorDraw->AddCircleFilled(g_androidVirtualMousePos, 8.0f, IM_COL32(245, 245, 245, 245), 20);
+        cursorDraw->AddCircle(g_androidVirtualMousePos, 9.0f, IM_COL32(20, 20, 20, 255), 20, 2.0f);
+        cursorDraw->AddLine(ImVec2(g_androidVirtualMousePos.x - 13.0f, g_androidVirtualMousePos.y), ImVec2(g_androidVirtualMousePos.x + 13.0f, g_androidVirtualMousePos.y), IM_COL32(20, 20, 20, 255), 1.5f);
+        cursorDraw->AddLine(ImVec2(g_androidVirtualMousePos.x, g_androidVirtualMousePos.y - 13.0f), ImVec2(g_androidVirtualMousePos.x, g_androidVirtualMousePos.y + 13.0f), IM_COL32(20, 20, 20, 255), 1.5f);
+    }
+#endif
 
     if (g_showThemeEditor) {
         ImGuiH::DrawColorEditor();
@@ -804,4 +832,39 @@ class $modify(ImGuiInitMenuLayer, MenuLayer) {
     }
 };
 
+#endif
+
+#ifdef GEODE_IS_ANDROID
+// In virtual-mouse mode, route Android touches into Dear ImGui as mouse events.
+// Suppress normal Cocos dispatch while the GDH menu is open so a tap cannot also
+// activate a game control underneath the menu.
+class $modify(GDHVirtualMouseTouchDispatcher, cocos2d::CCTouchDispatcher) {
+    void touches(cocos2d::CCSet* touches, cocos2d::CCEvent* event, unsigned int type) {
+        auto& config = Config::get();
+        const bool enabled = config.get<bool>("ui.android_virtual_mouse", false);
+        if (!enabled || !g_show || !touches || touches->count() == 0) {
+            CCTouchDispatcher::touches(touches, event, type);
+            return;
+        }
+
+        auto* touch = static_cast<cocos2d::CCTouch*>(touches->anyObject());
+        if (!touch) {
+            CCTouchDispatcher::touches(touches, event, type);
+            return;
+        }
+        const auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
+        const ImVec2 display = ImGui::GetIO().DisplaySize;
+        const cocos2d::CCPoint point = touch->getLocation();
+        if (winSize.width > 0.0f && winSize.height > 0.0f) {
+            g_androidVirtualMousePos = ImVec2(
+                point.x * display.x / winSize.width,
+                display.y - point.y * display.y / winSize.height
+            );
+            ImGui::GetIO().AddMousePosEvent(g_androidVirtualMousePos.x, g_androidVirtualMousePos.y);
+        }
+        if (type == CCTOUCHBEGAN) ImGui::GetIO().AddMouseButtonEvent(0, true);
+        else if (type == CCTOUCHENDED || type == CCTOUCHCANCELLED) ImGui::GetIO().AddMouseButtonEvent(0, false);
+        // Move and release are consumed as well: no gameplay touch leaks through.
+    }
+};
 #endif
