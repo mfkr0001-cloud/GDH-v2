@@ -7,9 +7,9 @@
 
 using namespace geode::prelude;
 
-GUI_HACK_CREATE("FPS", "Heavy Ship", "Adds inertia to ship vertical movement for easier straight fly", false);
+GUI_HACK_CREATE("FPS", "Heavy Ship", "Adds adjustable inertia to ship vertical movement", false);
 
-class $modify(HeavyShipPlayerObject, PlayerObject) {
+class $modify(GDHHeavyShipPlayerObject, PlayerObject) {
     static void onModify(auto& self) {
         auto& gui = GDH::Gui::get();
         auto& hack = gui.getWindow("FPS").findHackByName("Heavy Ship");
@@ -19,33 +19,37 @@ class $modify(HeavyShipPlayerObject, PlayerObject) {
 
     void update(float dt) {
         const bool wasShip = m_isShip;
-        const float velocityBeforeUpdate = m_yVelocity;
+        const double oldVelocity = m_yVelocity;
 
         PlayerObject::update(dt);
 
-        if (!wasShip || !m_isShip || dt <= 0.f || dt > 0.1f)
+        if (!wasShip || !m_isShip || !m_gameLayer || !std::isfinite(dt) || dt <= 0.0f || dt > 0.1f)
             return;
 
-        auto& config = Config::get();
-        if (!config.get<bool>("fps.heavy_ship", false))
+        auto& gui = GDH::Gui::get();
+        if (!gui.getWindow("FPS").findHackByName("Heavy Ship").getEnabled())
             return;
 
-        const float strength = std::clamp(config.get<float>("fps.heavy_ship::strength", 55.f), 0.f, 90.f);
-        if (strength <= 0.f)
+        float strength = Config::get().get<float>("fps.heavy_ship::strength", 4.f);
+        if (!std::isfinite(strength) || strength <= 0.f)
             return;
 
-        // Retain part of the previous vertical velocity. Higher strength means
-        // more inertia. Exponential scaling keeps the feel roughly consistent
-        // across different update rates.
-        const float retained = std::pow(strength / 100.f, dt * 60.f);
-        const float targetVelocity = m_yVelocity;
-        const float effectiveVelocity = velocityBeforeUpdate * retained + targetVelocity * (1.f - retained);
+        // 0 means no inertia. Any positive finite value is accepted; the response factor
+        // asymptotically approaches zero rather than overflowing for large values.
+        const double response = 1.0 / (1.0 + static_cast<double>(strength));
+        const double updatedVelocity = m_yVelocity;
+        const double filteredVelocity = oldVelocity + (updatedVelocity - oldVelocity) * response;
+        if (!std::isfinite(filteredVelocity))
+            return;
 
-        // PlayerObject::update already moved the ship using targetVelocity.
-        // Correct that frame's vertical displacement as well as the velocity,
-        // otherwise the next update can overwrite the change before it is seen.
-        m_position.y += (effectiveVelocity - targetVelocity) * dt;
-        m_yVelocity = effectiveVelocity;
+        // Correct the displacement already performed by the original update so
+        // position and velocity remain consistent for this frame.
+        const double correctedY = m_position.y + (filteredVelocity - updatedVelocity) * static_cast<double>(dt);
+        if (!std::isfinite(correctedY))
+            return;
+
+        m_yVelocity = filteredVelocity;
+        m_position.y = correctedY;
         setPosition(m_position);
     }
 };
