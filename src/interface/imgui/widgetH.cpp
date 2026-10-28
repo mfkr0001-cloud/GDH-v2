@@ -576,7 +576,7 @@ namespace ImGuiH {
         style.ItemSpacing = ImVec2(8.f * scale, 4.f * scale);
         style.ItemInnerSpacing = ImVec2(4.f * scale, 4.f * scale);
         style.IndentSpacing = 21.f * scale;
-        style.ScrollbarSize = 20.f * scale;
+        style.ScrollbarSize = 12.f * scale;
         style.GrabMinSize = 12.f * scale;
 
         const bool legacy = isLegacyRender();
@@ -1385,6 +1385,12 @@ namespace ImGuiH {
 
     bool BeginSmoothScroll(const char* name, bool* p_open, ImGuiWindowFlags f)
     {
+#ifdef GEODE_IS_ANDROID
+        // On Android, swipes inside a panel should scroll its contents, not drag
+        // the entire panel to a new position. The global layout handle is the
+        // only intentional way to reposition all panels.
+        f |= ImGuiWindowFlags_NoMove;
+#endif
         bool v = ImGui::Begin(name, p_open, f | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         ImGuiID id = ImGui::GetCurrentWindow()->ID;
         st.push_back(id);
