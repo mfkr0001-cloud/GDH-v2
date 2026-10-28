@@ -36,7 +36,33 @@ $execute {
         }
 
         ImGuiH::SpaceSeparator();
-        ImGui::TextWrapped("This does not unlock 90 FPS or change the screen refresh rate. Test in practice mode first: a large buffer can make wave releases feel late.");
+        ImGui::TextUnformatted("Heavy Ship");
+        ImGui::TextWrapped("Adds inertia to vertical ship movement. The value is an inertia factor, not a direct game gravity value; larger values make velocity changes more gradual.");
+        ImGui::Spacing();
+        ImGuiWidgetConfig::HackCheckbox("Enable Heavy Ship", "fps.heavy_ship", false);
+
+        float strength = config.get<float>("fps.heavy_ship::strength", 4.f);
+        if (!std::isfinite(strength) || strength < 0.f) strength = 4.f;
+
+        // Slider for quick adjustment, plus a numeric text field for precise values.
+        // The slider covers the common 0..90 range; the input field accepts values above 90 too.
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.58f);
+        if (ImGui::SliderFloat("##ship_heaviness_slider", &strength, 0.f, 90.f, "Heaviness: %.2f")) {
+            config.set<float>("fps.heavy_ship::strength", strength);
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-1.f);
+        if (ImGui::InputFloat("##ship_heaviness_input", &strength, 1.f, 10.f, "%.3f")) {
+            if (!std::isfinite(strength) || strength < 0.f) strength = 0.f;
+            config.set<float>("fps.heavy_ship::strength", strength);
+        }
+        ImGui::TextDisabled("Type a value in the right field and press Enter. Values above 90 are allowed; changes are saved.");
+        if (ImGuiH::Button("Reset ship heaviness", ImVec2(ImGui::GetContentRegionAvail().x, 0.f))) {
+            config.set<float>("fps.heavy_ship::strength", 4.f);
+        }
+
+        ImGuiH::SpaceSeparator();
+        ImGui::TextWrapped("Wave buffering does not unlock 90 FPS or change the screen refresh rate. Test both options in practice mode first; excessive ship inertia or wave buffering can affect control precision.");
     });
 }
 #endif
