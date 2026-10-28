@@ -34,9 +34,9 @@ static bool g_show = false;
 #ifdef GEODE_IS_ANDROID
 // Scale for Android: can be adjusted from the persistent floating control.
 // Phone-friendly defaults: compact controls and panels to reduce clipping on Android.
-static float g_androidUiScale = 0.72f;
-static float g_androidButtonScale = 0.78f;
-static float g_androidPanelScale = 0.68f;
+static float g_androidUiScale = 1.00f;
+static float g_androidButtonScale = 1.10f;
+static float g_androidPanelScale = 1.00f;
 #endif
 
 static bool g_showThemeEditor = false;
@@ -286,13 +286,13 @@ static void MenuSizeRender() {
         ImGui::TextWrapped("Adjust the PC-style GDH menu and its controls.");
         ImGui::Separator();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.45f, 2.00f, "%.2fx");
+        ImGui::SliderFloat("Menu scale", &g_androidUiScale, 0.70f, 1.80f, "%.2fx");
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::SliderFloat("Panel size", &g_androidPanelScale, 0.35f, 1.75f, "%.2fx")) {
+        if (ImGui::SliderFloat("Panel size", &g_androidPanelScale, 0.60f, 1.60f, "%.2fx")) {
             layoutManager.setPanelScale(g_androidPanelScale);
         }
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::SliderFloat("Button spacing", &g_androidButtonScale, 0.45f, 1.50f, "%.2fx");
+        ImGui::SliderFloat("Button size / spacing", &g_androidButtonScale, 0.75f, 1.60f, "%.2fx");
 
         ImGui::Separator();
         ImGui::TextUnformatted("Floating GDH button");
@@ -311,11 +311,11 @@ static void MenuSizeRender() {
             uiConfig.set<float>("ui_icon.minOpacity", floatingButtonOpacity);
             OverlayButton::get()->setMinOpacity(floatingButtonOpacity);
         }
-        ImGui::TextWrapped("Menu scale changes overall UI/text size. Panel size changes menu panels. Button spacing changes padding and spacing.");
+        ImGui::TextWrapped("Menu scale changes overall UI/text size. Panel size changes panel dimensions. Button size / spacing makes controls easier to tap. Scroll inside a panel to reach lower controls.");
         if (ImGuiH::Button("Reset sizes", {ImGui::GetContentRegionAvail().x, 0.0f})) {
-            g_androidUiScale = 0.72f;
-            g_androidPanelScale = 0.68f;
-            g_androidButtonScale = 0.78f;
+            g_androidUiScale = 1.00f;
+            g_androidPanelScale = 1.00f;
+            g_androidButtonScale = 1.10f;
             layoutManager.setPanelScale(g_androidPanelScale);
             uiConfig.set<float>("ui_icon.scale", 0.5f);
             uiConfig.set<float>("ui_icon.minOpacity", 0.2f);
