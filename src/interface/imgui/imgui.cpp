@@ -71,7 +71,8 @@ static std::vector<GDH::Layout::WindowInfo> g_fixedWindowSizes = {
     {"Cosmetic", 0.f, 1100.f},
     {"Level", 0.f, 1100.f},
     // {"Labels", 240.f, 380.f},
-    {"Replay Engine", 300.f, 225.f},
+    {"Replay Engine", 420.f, 0.f},
+    {"Framerate", 420.f, 0.f},
     {"Keybinds", 0.f, 180.f},
     {"Level", 0.f, 1080.f},
     {"Shortcuts", 260.f, 0.f},
@@ -660,16 +661,13 @@ void RenderMain() {
         std::string windowName = window.getName();
         if (windowName == "Invisible" || windowName == "Settings" || windowName == "Search") continue;
         
-        const bool isReplayEngineWindow = (windowName == "Replay Engine");
         // Keep Replay Engine on the layout manager's original position and size.
         // Do not force a larger Android-only window; that can cover the bot UI
         // and ignores the user's saved layout.
         layoutManager.applyWindowTransform(windowName);
-        // Only Replay Engine keeps direct Begin for its custom playback controls.
-        // Every other panel uses the touch content scroller so lower controls remain reachable.
-        const bool beginVisible = isReplayEngineWindow
-            ? ImGui::Begin(windowName.c_str())
-            : ImGuiH::BeginSmoothScroll(windowName.c_str());
+        // All Android panels, including Replay Engine, use the touch content scroller.
+        // This keeps lower controls reachable on short screens instead of clipping them.
+        const bool beginVisible = ImGuiH::BeginSmoothScroll(windowName.c_str());
 #ifdef GEODE_IS_ANDROID
         const bool titleTapToggled = HandleAndroidTitleTap();
         layoutManager.setWindowCollapsed(windowName, ImGui::IsWindowCollapsed());
