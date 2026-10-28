@@ -34,22 +34,24 @@ class $modify(GDHHeavyShipPlayerObject, PlayerObject) {
         if (!std::isfinite(strength) || strength <= 0.f)
             return;
 
-        // 0 means no inertia. Any positive finite value is accepted; the response factor
-        // asymptotically approaches zero rather than overflowing for large values.
-        const double response = 1.0 / (1.0 + static_cast<double>(strength));
+        // Use a time-based smoothing coefficient so the response is consistent
+        // across frame rates. Avoid correcting position with setPosition() here:
+        // that extra per-frame position write can cause visible micro-stutter
+        // during long straight ship sections.
+        const double safeStrength = static_cast<double>(strength);
+        const double tau = 1.0 + safeStrength;
+        const double response = 1.0 - std::exp(-static_cast<double>(dt) * 60.0 / tau);
+        if (!std::isfinite(response))
+            return;
+
         const double updatedVelocity = m_yVelocity;
-        const double filteredVelocity = oldVelocity + (updatedVelocity - oldVelocity) * response;
+        const double filteredVelocity =
+            oldVelocity + (updatedVelocity - oldVelocity) * std::clamp(response, 0.0, 1.0);
         if (!std::isfinite(filteredVelocity))
             return;
 
-        // Correct the displacement already performed by the original update so
-        // position and velocity remain consistent for this frame.
-        const double correctedY = m_position.y + (filteredVelocity - updatedVelocity) * static_cast<double>(dt);
-        if (!std::isfinite(correctedY))
-            return;
-
+        // Keep the smoothed velocity for the next physics update; do not rewrite
+        // the already-integrated position, which can make the ship appear to hitch.
         m_yVelocity = filteredVelocity;
-        m_position.y = correctedY;
-        setPosition(m_position);
     }
 };
