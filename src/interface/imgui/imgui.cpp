@@ -66,9 +66,9 @@ static std::vector<std::vector<std::string>> g_layout = {
     {"Creator", "Labels"},
     {"Replay Engine", "Keybinds"},
     {"Framerate"},
-    {"FPS"},
     {"Shortcuts"},
     {"GDH Settings"},
+    {"FPS"},
     {"Menu Size"}
 };
 
