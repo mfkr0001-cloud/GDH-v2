@@ -82,16 +82,6 @@ bool GDH::Layout::Manager::applyWindowTransform(const std::string& name) {
             float x = info->x + m_offsetX;
             float y = info->y + m_offsetY;
 
-            // The Framerate panel contains Wave/ship settings and can become very tall.
-            // Keep it on the RIGHT side, as in the original layout, and limit its size
-            // so it does not cover the left-side tabs or the full menu.
-            if (name == "Framerate") {
-                width = std::min(width, std::max(260.f, display.x * 0.30f));
-                height = std::min(height, std::max(220.f, display.y * 0.52f));
-                x = std::max(12.f, display.x - width - 12.f);
-                y = std::max(12.f, display.y - height - 12.f);
-            }
-
             // Reserve a few pixels to avoid ImGui's unnecessary inner scrollbar.
             ImGui::SetNextWindowPos(ImVec2(x, y), ImGuiCond_Always);
             ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
