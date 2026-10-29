@@ -72,13 +72,14 @@ static std::vector<GDH::Layout::WindowInfo> g_fixedWindowSizes = {
     {"Cosmetic", 0.f, 1100.f},
     {"Level", 0.f, 1100.f},
     // {"Labels", 240.f, 380.f},
-    {"Replay Engine", 420.f, 0.f},
-    {"Framerate", 420.f, 0.f},
+    {"Replay Engine", 440.f, 0.f},
+    {"FPS", 300.f, 0.f},
+    {"Framerate", 300.f, 0.f},
     {"Keybinds", 0.f, 180.f},
     {"Level", 0.f, 1080.f},
-    {"Shortcuts", 260.f, 0.f},
-    {"GDH Settings", 225.f, 0.f},
-    {"Menu Size", 390.f, 0.f},
+    {"Shortcuts", 280.f, 0.f},
+    {"GDH Settings", 245.f, 0.f},
+    {"Menu Size", 410.f, 0.f},
 };
 
 void onOpen() {
