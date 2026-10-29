@@ -61,6 +61,7 @@ static std::vector<std::vector<std::string>> g_layout = {
     {"Level"},
     {"Creator", "Labels"},
     {"Replay Engine", "Keybinds"},
+    {"FPS"},
     {"Framerate"},
     {"Shortcuts"},
     {"GDH Settings"},
