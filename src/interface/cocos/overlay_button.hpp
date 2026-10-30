@@ -1,12 +1,16 @@
 #pragma once
 #include <Geode/Geode.hpp>
+#include <chrono>
 
 class OverlayButton : public cocos2d::CCMenu {
     geode::Function<void()> m_callback;
     cocos2d::CCSprite* m_sprite = nullptr;
+    cocos2d::CCSprite* m_pauseSprite = nullptr;
     cocos2d::CCPoint m_target;
     float m_scale = 0.60f;
     bool m_moved = false;
+    bool m_pressedPause = false;
+    std::chrono::steady_clock::time_point m_touchStart;
 
     bool init(const char* file);
     void update(float dt) override;
