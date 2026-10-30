@@ -51,7 +51,12 @@ Window& Gui::getWindow(const std::string& name) {
 }
 
 void Window::sortHacksAlphabetically() {
-    std::sort(m_hacks.begin(), m_hacks.end(), [](const Hack& a, const Hack& b) {
+    std::sort(m_hacks.begin(), m_hacks.end(), [this](const Hack& a, const Hack& b) {
+        if (m_name == "Core") {
+            const bool aPanel = a.getName() == "Floating Control Panel";
+            const bool bPanel = b.getName() == "Floating Control Panel";
+            if (aPanel != bPanel) return aPanel;
+        }
         return a.getName() < b.getName();
     });
 }
