@@ -14,7 +14,8 @@ class $modify(OverlayButtonVisiblityPL, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-        if (Config::get().get<bool>("ui_icon.hide_on_game", true))
+        if (Config::get().get<bool>("ui_icon.hide_on_game", true) &&
+            !Config::get().get<bool>("ui_icon.floating_panel_enabled", true))
             OverlayButton::get()->setVisible(false);
 
         return true;
@@ -23,26 +24,30 @@ class $modify(OverlayButtonVisiblityPL, PlayLayer) {
     void pauseGame(bool unfocused) {
         PlayLayer::pauseGame(unfocused);
 
-        OverlayButton::get()->setVisible(true);
+        if (Config::get().get<bool>("ui_icon.floating_panel_enabled", true))
+            OverlayButton::get()->setVisible(true);
     }
     
     void resume() {
         PlayLayer::resume();
         
-        if (Config::get().get<bool>("ui_icon.hide_on_game", true))
+        if (Config::get().get<bool>("ui_icon.hide_on_game", true) &&
+            !Config::get().get<bool>("ui_icon.floating_panel_enabled", true))
             OverlayButton::get()->setVisible(false);
     }
 
     void resumeAndRestart(bool fromStart) {
         PlayLayer::resumeAndRestart(fromStart);
 
-        if (Config::get().get<bool>("ui_icon.hide_on_game", true))
+        if (Config::get().get<bool>("ui_icon.hide_on_game", true) &&
+            !Config::get().get<bool>("ui_icon.floating_panel_enabled", true))
             OverlayButton::get()->setVisible(false);
     }
 
     void showEndLayer() {
         PlayLayer::showEndLayer();
-        OverlayButton::get()->setVisible(true);
+        if (Config::get().get<bool>("ui_icon.floating_panel_enabled", true))
+            OverlayButton::get()->setVisible(true);
     }
 };
 
@@ -61,7 +66,8 @@ class $modify(OverlayButtonVisiblityEUI, EditorUI) {
     void onPause(cocos2d::CCObject *sender) {
         EditorUI::onPause(sender);
 
-        OverlayButton::get()->setVisible(true);
+        if (Config::get().get<bool>("ui_icon.floating_panel_enabled", true))
+            OverlayButton::get()->setVisible(true);
     }
 };
 
