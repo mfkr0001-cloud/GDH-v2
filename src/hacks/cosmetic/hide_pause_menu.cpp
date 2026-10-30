@@ -19,7 +19,8 @@ class $modify(HidePauseMenuPauseLayer, PauseLayer) {
     }
     
     void customSetup() {
-        this->setScale(0.f);
         PauseLayer::customSetup();
+        auto& hack = GDH::Gui::get().getWindow("Cosmetic").findHackByName("Hide Pause Menu");
+        this->setScale(hack.getEnabled() ? 0.f : 1.f);
     }
 };
