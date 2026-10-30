@@ -1,5 +1,6 @@
 #include "overlay_button.hpp"
 #include "../../core/config.hpp"
+#include "../../core/gui.hpp"
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/GameManager.hpp>
 
@@ -41,6 +42,37 @@ bool OverlayButton::init(const char* file) {
     m_target = m_sprite->getPosition();
     addChild(m_sprite);
 
+    // Lower floating button controls the existing Hide Pause Menu hack.
+    m_pauseSprite = CCSprite::create(file);
+    if (m_pauseSprite) {
+        m_pauseSprite->setScale(m_scale * 0.82f);
+        m_pauseSprite->setOpacity(static_cast<GLubyte>(m_minOpacity * 255.f));
+        auto label = CCLabelBMFont::create("P", "bigFont.fnt");
+        if (label) {
+            label->setScale(0.55f);
+            label->setPosition({
+                m_pauseSprite->getContentSize().width * 0.5f,
+                m_pauseSprite->getContentSize().height * 0.5f
+            });
+            m_pauseSprite->addChild(label);
+        }
+        m_pauseSprite->setPosition({
+            m_target.x,
+            std::max(radius(), m_target.y - radius() * 2.15f)
+        });
+        addChild(m_pauseSprite);
+    }
+
+    auto autoLabel = CCLabelBMFont::create("A", "bigFont.fnt");
+    if (autoLabel) {
+        autoLabel->setScale(0.55f);
+        autoLabel->setPosition({
+            m_sprite->getContentSize().width * 0.5f,
+            m_sprite->getContentSize().height * 0.5f
+        });
+        m_sprite->addChild(autoLabel);
+    }
+
     setZOrder(1000);
     setPosition({0, 0});
     scheduleUpdate();
@@ -53,9 +85,8 @@ bool OverlayButton::init(const char* file) {
 
 void OverlayButton::setSizeScale(float scale) {
     m_scale = std::clamp(scale, 0.1f, 5.0f);
-    if (m_sprite) {
-        m_sprite->setScale(m_scale);
-    }
+    if (m_sprite) m_sprite->setScale(m_scale);
+    if (m_pauseSprite) m_pauseSprite->setScale(m_scale * 0.82f);
     Config::get().set<float>("ui_icon.scale", m_scale);
 }
 
@@ -63,6 +94,7 @@ void OverlayButton::setMinOpacity(float opacity) {
     opacity = std::clamp(opacity, 0.0f, 1.0f);
     Config::get().set<float>("ui_icon.minOpacity", opacity);
     if (m_sprite) m_sprite->setOpacity(static_cast<GLubyte>(opacity * 255.0f));
+    if (m_pauseSprite) m_pauseSprite->setOpacity(static_cast<GLubyte>(opacity * 255.0f));
 }
 
 void OverlayButton::setVisible(bool visible) {
@@ -89,45 +121,87 @@ void OverlayButton::update(float dt) {
 
     CCPoint pos = m_sprite->getPosition();
     if (ccpDistance(pos, m_target) < 0.5f) return;
-    m_sprite->setPosition(ccpLerp(pos, m_target, 12.f * dt));
+    auto next = ccpLerp(pos, m_target, 12.f * dt);
+    m_sprite->setPosition(next);
+    if (m_pauseSprite) {
+        m_pauseSprite->setPosition({
+            next.x,
+            std::max(r, next.y - r * 2.15f)
+        });
+    }
 }
 
 bool OverlayButton::ccTouchBegan(CCTouch* t, CCEvent*) {
     if (!isVisible()) return false;
 
     CCPoint tp = convertToNodeSpace(t->getLocation());
-    if (ccpDistance(tp, m_sprite->getPosition()) > radius()) return false;
+    float pauseRadius = m_pauseSprite ? m_pauseSprite->getScaledContentSize().width * 0.5f : 0.f;
+    m_pressedPause = m_pauseSprite &&
+        ccpDistance(tp, m_pauseSprite->getPosition()) <= pauseRadius;
+
+    if (!m_pressedPause && ccpDistance(tp, m_sprite->getPosition()) > radius())
+        return false;
 
     m_moved = false;
-    m_sprite->stopAllActions();
-    m_sprite->runAction(CCScaleTo::create(0.08f, m_scale * 0.85f));
-    m_sprite->runAction(CCFadeTo::create(0.08f, 255));
+    m_touchStart = std::chrono::steady_clock::now();
+
+    auto* pressed = m_pressedPause ? m_pauseSprite : m_sprite;
+    pressed->stopAllActions();
+    pressed->runAction(CCScaleTo::create(
+        0.08f,
+        (m_pressedPause ? m_scale * 0.82f : m_scale) * 0.88f
+    ));
+    pressed->runAction(CCFadeTo::create(0.08f, 255));
     return true;
 }
 
 void OverlayButton::ccTouchMoved(CCTouch* t, CCEvent*) {
-    CCPoint tp = convertToNodeSpace(t->getLocation());
-    if (!m_moved && ccpDistance(tp, m_sprite->getPosition()) < radius()) return;
-    m_moved = true;
+    if (m_pressedPause) return;
 
+    CCPoint tp = convertToNodeSpace(t->getLocation());
+    if (!m_moved && ccpDistance(tp, m_sprite->getPosition()) < radius())
+        return;
+
+    m_moved = true;
     auto win_size = CCDirector::sharedDirector()->getWinSize();
     float r = m_sprite->getContentSize().width * m_scale * 0.60f;
     m_target.x = std::clamp(tp.x, r, win_size.width - r);
-    m_target.y = std::clamp(tp.y, r, win_size.height - r);
+    m_target.y = std::clamp(tp.y, r * 2.2f, win_size.height - r);
 }
 
 void OverlayButton::ccTouchEnded(CCTouch*, CCEvent*) {
-    m_sprite->stopAllActions();
-    m_sprite->runAction(CCEaseBackOut::create(CCScaleTo::create(0.25f, m_scale)));
+    auto* pressed = m_pressedPause ? m_pauseSprite : m_sprite;
+    pressed->stopAllActions();
+    pressed->runAction(CCEaseBackOut::create(CCScaleTo::create(
+        0.25f, m_pressedPause ? m_scale * 0.82f : m_scale
+    )));
 
-    float m_minOpacity = std::clamp(Config::get().get<float>("ui_icon.minOpacity", 0.2f), 0.0f, 1.0f);
-    m_sprite->runAction(CCSequence::create(
+    float opacity = std::clamp(
+        Config::get().get<float>("ui_icon.minOpacity", 0.2f), 0.0f, 1.0f
+    );
+    pressed->runAction(CCSequence::create(
         CCDelayTime::create(0.8f),
-        CCFadeTo::create(0.3f, m_minOpacity * 255),
+        CCFadeTo::create(0.3f, opacity * 255.f),
         nullptr
     ));
 
-    if (!m_moved && m_callback) m_callback();
+    auto held = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - m_touchStart
+    ).count();
+
+    if (!m_moved) {
+        auto& gui = GDH::Gui::get();
+        if (m_pressedPause) {
+            gui.getWindow("Cosmetic").findHackByName("Hide Pause Menu").toggle();
+        } else if (held >= 500) {
+            // Long press keeps the existing GDH menu toggle available.
+            if (m_callback) m_callback();
+        } else {
+            gui.getWindow("Level").findHackByName("Autoclicker").toggle();
+        }
+    }
+
+    m_pressedPause = false;
     m_moved = false;
     savePos();
 }
